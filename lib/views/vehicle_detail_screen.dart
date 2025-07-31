@@ -381,110 +381,117 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
 
   Widget _buildRefuelingCard(FuelTransaction transaction) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Compact header: Date + Time on left, Volume on right
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                DateFormat('MMM dd, yyyy').format(transaction.date),
+                '${DateFormat('MMM dd, yyyy').format(transaction.date)} ${DateFormat('HH:mm').format(transaction.date)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 15,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   '${transaction.volume.toStringAsFixed(1)}L',
                   style: const TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
+                    fontSize: 13,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
+          
+          // Compact info: Driver on left, Location on right
           Row(
             children: [
-              const Icon(Icons.person, size: 16, color: Colors.blue),
-              const SizedBox(width: 4),
+              // Driver info
               Expanded(
-                child: Text(
-                  transaction.driverName.isEmpty ? 'Unknown Driver' : transaction.driverName,
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: 14,
-                  ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.person, size: 14, color: Colors.blue),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        transaction.driverName.isEmpty ? 'Unknown Driver' : transaction.driverName,
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.location_on, size: 16, color: Colors.red),
-              const SizedBox(width: 4),
+              const SizedBox(width: 8),
+              
+              // Location info
               Expanded(
-                child: Text(
-                  transaction.siteName.isEmpty ? 'Unknown Site' : transaction.siteName,
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: 14,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Icon(Icons.location_on, size: 14, color: Colors.red),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        transaction.siteName.isEmpty ? 'Unknown Site' : transaction.siteName,
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.access_time, size: 16, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text(
-                DateFormat('HH:mm').format(transaction.date),
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
+          
+          // Anomalies (if any)
           if (transaction.hasAnomalies) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Wrap(
               spacing: 4,
               children: transaction.anomalies.map((anomaly) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '${anomaly.emoji} ${anomaly.label}',
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: Colors.orange,
                     ),
                   ),

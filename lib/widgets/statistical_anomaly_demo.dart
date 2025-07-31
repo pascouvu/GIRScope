@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:girscope/services/anomaly_detection_service.dart';
 import 'package:girscope/models/fuel_transaction.dart';
+import 'package:girscope/services/statistical_analysis_service.dart';
 
 class StatisticalAnomalyDemo extends StatefulWidget {
   const StatisticalAnomalyDemo({super.key});

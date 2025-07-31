@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:girscope/models/fuel_transaction.dart';
 import 'package:girscope/services/supabase_service.dart';
 import 'package:girscope/services/anomaly_detection_service.dart';
+import 'package:girscope/services/statistical_analysis_service.dart';
 import 'package:girscope/widgets/anomaly_card.dart';
 import 'package:girscope/widgets/anomaly_analysis_log_viewer.dart';
 import 'package:girscope/widgets/simple_analysis_log_viewer.dart';

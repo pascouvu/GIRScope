@@ -1,5 +1,5 @@
 import 'package:girscope/utils/json_utils.dart';
-import 'package:girscope/services/anomaly_detection_service.dart';
+import 'package:girscope/services/statistical_analysis_service.dart';
 
 class FuelTransaction {
   final String id;
