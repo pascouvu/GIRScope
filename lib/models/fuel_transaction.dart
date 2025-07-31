@@ -1,4 +1,5 @@
 import 'package:girscope/utils/json_utils.dart';
+import 'package:girscope/services/anomaly_detection_service.dart';
 
 class FuelTransaction {
   final String id;
@@ -18,6 +19,7 @@ class FuelTransaction {
   final bool volMax;
   final bool newKmeter;
   final bool newHmeter;
+  final List<StatisticalAnomaly>? statisticalAnomalies;
 
   FuelTransaction({
     required this.id,
@@ -37,34 +39,11 @@ class FuelTransaction {
     required this.volMax,
     required this.newKmeter,
     required this.newHmeter,
+    this.statisticalAnomalies,
   });
-
-  
 
   factory FuelTransaction.fromJson(Map<String, dynamic> json) {
     try {
-      print('FuelTransaction.fromJson - Processing transaction data...');
-      
-      // Debug logging for problematic fields
-      if (json['vehicle_name'] != null) {
-        print('FuelTransaction - vehicle_name type: ${json['vehicle_name'].runtimeType}, value: ${json['vehicle_name']}');
-      }
-      if (json['vehicle'] != null) {
-        print('FuelTransaction - vehicle type: ${json['vehicle'].runtimeType}, value: ${json['vehicle']}');
-      }
-      if (json['driver_name'] != null) {
-        print('FuelTransaction - driver_name type: ${json['driver_name'].runtimeType}, value: ${json['driver_name']}');
-      }
-      if (json['driver'] != null) {
-        print('FuelTransaction - driver type: ${json['driver'].runtimeType}, value: ${json['driver']}');
-      }
-      if (json['site_name'] != null) {
-        print('FuelTransaction - site_name type: ${json['site_name'].runtimeType}, value: ${json['site_name']}');
-      }
-      if (json['site'] != null) {
-        print('FuelTransaction - site type: ${json['site'].runtimeType}, value: ${json['site']}');
-      }
-
       return FuelTransaction(
         id: json['id']?.toString() ?? '',
         transacId: json['transac_id']?.toString() ?? '0',
@@ -93,17 +72,60 @@ class FuelTransaction {
 
   List<AnomalyType> get anomalies {
     List<AnomalyType> anomalies = [];
+    print('FuelTransaction.anomalies getter - manual: $manual, mtrForced: $mtrForced, volMax: $volMax, newKmeter: $newKmeter, newHmeter: $newHmeter, kcons: $kcons, hcons: $hcons');
     if (manual) anomalies.add(AnomalyType.manual);
     if (mtrForced) anomalies.add(AnomalyType.forcedMeter);
     if (volMax) anomalies.add(AnomalyType.maxVolume);
     if (newKmeter || newHmeter) anomalies.add(AnomalyType.meterReset);
-    if ((kcons != null && kcons! > 50) || (hcons != null && hcons! > 50)) {
+    
+    // Use dynamic threshold based on statistical analysis if available
+    double consumptionThreshold = 50.0; // fallback
+    if (hasStatisticalAnomalies) {
+      final consumptionAnomaly = allStatisticalAnomalies
+          .where((a) => a.type == StatisticalAnomalyType.consumption)
+          .firstOrNull;
+      if (consumptionAnomaly != null) {
+        // Use 2 standard deviations above the mean as the threshold
+        consumptionThreshold = consumptionAnomaly.expectedValue + (2 * consumptionAnomaly.standardDeviation);
+      }
+    }
+    
+    if ((kcons != null && kcons! > consumptionThreshold) || (hcons != null && hcons! > consumptionThreshold)) {
       anomalies.add(AnomalyType.highConsumption);
     }
+    print('FuelTransaction.anomalies getter - Anomalies found: ${anomalies.map((e) => e.label).join(', ')}');
     return anomalies;
   }
 
-  bool get hasAnomalies => anomalies.isNotEmpty;
+  bool get hasAnomalies => anomalies.isNotEmpty || hasStatisticalAnomalies;
+  
+  bool get hasStatisticalAnomalies => statisticalAnomalies?.isNotEmpty ?? false;
+  
+  List<StatisticalAnomaly> get allStatisticalAnomalies => statisticalAnomalies ?? [];
+  
+  /// Creates a copy of this transaction with statistical anomalies
+  FuelTransaction copyWithStatisticalAnomalies(List<StatisticalAnomaly> anomalies) {
+    return FuelTransaction(
+      id: id,
+      transacId: transacId,
+      date: date,
+      vehicleName: vehicleName,
+      vehicleId: vehicleId,
+      driverName: driverName,
+      driverId: driverId,
+      siteName: siteName,
+      volume: volume,
+      kdelta: kdelta,
+      kcons: kcons,
+      hcons: hcons,
+      manual: manual,
+      mtrForced: mtrForced,
+      volMax: volMax,
+      newKmeter: newKmeter,
+      newHmeter: newHmeter,
+      statisticalAnomalies: anomalies,
+    );
+  }
 }
 
 enum AnomalyType {

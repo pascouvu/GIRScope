@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:girscope/models/fuel_transaction.dart';
 import 'package:girscope/services/supabase_service.dart';
+import 'package:girscope/services/anomaly_detection_service.dart';
 import 'package:girscope/widgets/anomaly_card.dart';
+import 'package:girscope/widgets/anomaly_analysis_log_viewer.dart';
+import 'package:girscope/widgets/simple_analysis_log_viewer.dart';
 
 enum DateFilter { last3Days, last7Days, last30Days, custom }
 
@@ -14,6 +17,7 @@ class AnomaliesTab extends StatefulWidget {
 
 class _AnomaliesTabState extends State<AnomaliesTab> {
   final SupabaseService _supabaseService = SupabaseService();
+  final AnomalyDetectionService _anomalyService = AnomalyDetectionService();
   
   List<FuelTransaction> _transactions = [];
   List<FuelTransaction> _filteredTransactions = [];
@@ -23,6 +27,7 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
   DateTime? _customEndDate;
   bool _isLoading = true;
   String? _error;
+  bool _useStatisticalAnalysis = true;
 
   @override
   void initState() {
@@ -43,10 +48,29 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
         endDate: endDate,
       );
       
+      List<FuelTransaction> processedTransactions = transactions;
+      
+      // Apply statistical anomaly detection if enabled
+      if (_useStatisticalAnalysis) {
+        try {
+          final anomaliesMap = await _anomalyService.analyzeAnomalies(
+            transactions: transactions,
+            startDate: startDate,
+            endDate: endDate,
+          );
+          
+          // Merge statistical anomalies with original transactions
+          processedTransactions = _mergeStatisticalAnomalies(transactions, anomaliesMap);
+        } catch (e) {
+          print('Statistical analysis failed: $e');
+          // Continue with original transactions if statistical analysis fails
+        }
+      }
+      
       if (mounted) {
         setState(() {
-          _transactions = transactions;
-          _filteredTransactions = _filterTransactionsByAnomalyType(transactions);
+          _transactions = processedTransactions;
+          _filteredTransactions = _filterTransactionsByAnomalyType(processedTransactions);
           _isLoading = false;
         });
       }
@@ -81,12 +105,20 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
 
   List<FuelTransaction> _filterTransactionsByAnomalyType(List<FuelTransaction> transactions) {
     if (_selectedAnomalyType == 'all') {
-      return transactions;
+      return transactions.where((t) => t.hasAnomalies).toList();
     }
     
     return transactions.where((transaction) {
-      return transaction.anomalies.any((anomaly) => 
+      // Check traditional anomalies
+      final hasTraditionalAnomaly = transaction.anomalies.any((anomaly) => 
         anomaly.label.toLowerCase().contains(_selectedAnomalyType.toLowerCase()));
+      
+      // Check statistical anomalies
+      final hasStatisticalAnomaly = transaction.hasStatisticalAnomalies && 
+        transaction.allStatisticalAnomalies.any((anomaly) =>
+          _getStatisticalAnomalyLabel(anomaly.type).toLowerCase().contains(_selectedAnomalyType.toLowerCase()));
+      
+      return hasTraditionalAnomaly || hasStatisticalAnomaly;
     }).toList();
   }
 
@@ -125,14 +157,48 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
     }
   }
 
+  List<FuelTransaction> _mergeStatisticalAnomalies(
+    List<FuelTransaction> originalTransactions,
+    Map<String, List<StatisticalAnomaly>> anomaliesMap,
+  ) {
+    // Merge statistical anomalies with original transactions
+    return originalTransactions.map((transaction) {
+      final statisticalAnomalies = anomaliesMap[transaction.id];
+      if (statisticalAnomalies != null) {
+        return transaction.copyWithStatisticalAnomalies(statisticalAnomalies);
+      }
+      return transaction;
+    }).toList();
+  }
+
   List<String> _getAvailableAnomalyTypes() {
     final types = <String>{'all'};
     for (final transaction in _transactions) {
+      // Traditional anomalies
       for (final anomaly in transaction.anomalies) {
         types.add(anomaly.label.toLowerCase());
       }
+      // Statistical anomalies
+      if (transaction.hasStatisticalAnomalies) {
+        for (final anomaly in transaction.allStatisticalAnomalies) {
+          types.add(_getStatisticalAnomalyLabel(anomaly.type).toLowerCase());
+        }
+      }
     }
     return types.toList();
+  }
+  
+  String _getStatisticalAnomalyLabel(StatisticalAnomalyType type) {
+    switch (type) {
+      case StatisticalAnomalyType.consumption:
+        return 'Statistical Consumption';
+      case StatisticalAnomalyType.volume:
+        return 'Statistical Volume';
+      case StatisticalAnomalyType.frequency:
+        return 'Statistical Frequency';
+      case StatisticalAnomalyType.timing:
+        return 'Statistical Timing';
+    }
   }
 
   @override
@@ -211,6 +277,36 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
               
               const SizedBox(height: 16),
               
+              // Statistical Analysis Toggle
+              Row(
+                children: [
+                  Icon(
+                    Icons.analytics,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Statistical Analysis',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Switch(
+                    value: _useStatisticalAnalysis,
+                    onChanged: (value) {
+                      setState(() {
+                        _useStatisticalAnalysis = value;
+                      });
+                      _loadTransactions();
+                    },
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
               // Anomaly Type Filter Section
               Row(
                 children: [
@@ -267,20 +363,60 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
               
               if (_filteredTransactions.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    '${_filteredTransactions.length} anomal${_filteredTransactions.length == 1 ? 'y' : 'ies'} found',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        '${_filteredTransactions.length} anomal${_filteredTransactions.length == 1 ? 'y' : 'ies'} found',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
-                  ),
+                    const Spacer(),
+                    if (_useStatisticalAnalysis) ...[
+                      TextButton.icon(
+                        onPressed: () {
+                          final log = _anomalyService.getCurrentAnalysisLog();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => SimpleAnalysisLogViewer(log: log),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.list_alt, size: 16),
+                        label: const Text('Analysis Log'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.primary,
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          final log = _anomalyService.getCurrentAnalysisLog();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => AnomalyAnalysisLogViewer(log: log),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.analytics, size: 16),
+                        label: const Text('Technical'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.secondary,
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ],

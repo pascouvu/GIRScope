@@ -161,6 +161,7 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final dynamic jsonResponse = jsonDecode(response.body);
+        print('Fuel Transactions API - Raw JSON Response: ${jsonResponse}');
         
         List<dynamic> data;
         bool more = false;

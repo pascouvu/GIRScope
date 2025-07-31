@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:girscope/models/fuel_transaction.dart';
+import 'package:girscope/models/fuel_transaction.dart';
+import 'package:girscope/models/fuel_transaction.dart';
 import 'package:girscope/models/vehicle.dart';
 import 'package:girscope/models/driver.dart'; // To fetch from external API
 import 'package:girscope/services/api_service.dart';
@@ -45,6 +47,75 @@ class SupabaseService { // Temporary comment
           break;
         }
 
+        // --- Start: Ensure all vehicles from transactions exist ---
+        final vehicleIdsInBatch = transactions
+            .map((t) => t.vehicleId)
+            .where((id) => id != null)
+            .toSet();
+
+        if (vehicleIdsInBatch.isNotEmpty) {
+          final existingVehiclesResponse = await _supabase
+              .rpc('get_vehicles_by_ids', params: { 'ids': vehicleIdsInBatch.toList() });
+
+          final existingVehicleIds =
+              existingVehiclesResponse.map((v) => v['id'].toString()).toSet();
+
+          final missingVehicleIds =
+              vehicleIdsInBatch.difference(existingVehicleIds);
+
+          if (missingVehicleIds.isNotEmpty) {
+            print('SupabaseService: Found ${missingVehicleIds.length} missing vehicles. Creating placeholder entries...');
+            final List<Map<String, dynamic>> placeholderVehicles = transactions
+                .where((t) => missingVehicleIds.contains(t.vehicleId))
+                .map((t) => {
+                      'id': t.vehicleId!,
+                      'name': t.vehicleName, // The only NOT NULL field
+                    })
+                .toList();
+            
+            // Deduplicate placeholderVehicles before inserting
+            final uniquePlaceholderVehicles = { for (var v in placeholderVehicles) v['id']: v };
+
+            await _supabase.from('vehicles').upsert(uniquePlaceholderVehicles.values.toList(), onConflict: 'id');
+            print('SupabaseService: Created ${uniquePlaceholderVehicles.length} placeholder vehicles.');
+          }
+        }
+        // --- End: Ensure all vehicles from transactions exist ---
+
+        // --- Start: Ensure all drivers from transactions exist ---
+        final driverIdsInBatch = transactions
+            .map((t) => t.driverId)
+            .where((id) => id != null)
+            .toSet();
+
+        if (driverIdsInBatch.isNotEmpty) {
+          final existingDriversResponse = await _supabase
+              .rpc('get_drivers_by_ids', params: { 'ids': driverIdsInBatch.toList() });
+
+          final existingDriverIds =
+              existingDriversResponse.map((d) => d['id'].toString()).toSet();
+
+          final missingDriverIds = driverIdsInBatch.difference(existingDriverIds);
+
+          if (missingDriverIds.isNotEmpty) {
+            print('SupabaseService: Found ${missingDriverIds.length} missing drivers. Creating placeholder entries...');
+            final List<Map<String, dynamic>> placeholderDrivers = transactions
+                .where((t) => missingDriverIds.contains(t.driverId))
+                .map((t) => {
+                      'id': t.driverId!,
+                      'name': t.driverName, // The only NOT NULL field
+                      'first_name': '', // Provide a default empty string
+                    })
+                .toList();
+            
+            final uniquePlaceholderDrivers = { for (var d in placeholderDrivers) d['id']: d };
+
+            await _supabase.from('drivers').upsert(uniquePlaceholderDrivers.values.toList(), onConflict: 'id');
+            print('SupabaseService: Created ${uniquePlaceholderDrivers.length} placeholder drivers.');
+          }
+        }
+        // --- End: Ensure all drivers from transactions exist ---
+
         // Prepare data for Supabase insertion
         final List<Map<String, dynamic>> dataToInsert = transactions.map((t) => {
               'id': t.id,
@@ -64,8 +135,6 @@ class SupabaseService { // Temporary comment
               'vol_max': t.volMax,
               'new_kmeter': t.newKmeter,
               'new_hmeter': t.newHmeter,
-              'has_anomalies': t.hasAnomalies,
-              'anomalies_json': t.anomalies.map((a) => {'label': a.label, 'emoji': a.emoji}).toList(),
             }).toList();
 
         // Insert into Supabase
@@ -74,8 +143,12 @@ class SupabaseService { // Temporary comment
         print('SupabaseService: Synced \$totalSynced transactions. Last transaction ID: \${transactions.last.id}');
         lastId = transactions.last.id; // Update lastId for next iteration
 
-      } catch (e) {
-        print('SupabaseService: Error during sync: \$e');
+      } catch (e, stackTrace) {
+        print('SupabaseService: Error during sync: $e');
+        print('Stack trace: $stackTrace');
+        if (e is PostgrestException) {
+          print('PostgrestException details: ${e.details}');
+        }
         moreData = false; // Stop on error
       }
     }
@@ -112,6 +185,30 @@ class SupabaseService { // Temporary comment
     return response.map((json) => FuelTransaction.fromJson(json)).toList();
   }
 
+  // Method to get ALL fuel transactions from Supabase for a specific vehicle (no date limit)
+  Future<List<FuelTransaction>> getVehicleRefuelingDataUnlimited(String vehicleId) async {
+    final List<Map<String, dynamic>> response = await _supabase
+        .from('fuel_transactions')
+        .select('*')
+        .eq('vehicle_id', vehicleId) // Get all transactions for this vehicle
+        .order('date', ascending: false);
+
+    print('SupabaseService: Found ${response.length} total transactions for vehicle $vehicleId');
+    return response.map((json) => FuelTransaction.fromJson(json)).toList();
+  }
+
+  // Method to get ALL fuel transactions from Supabase for a specific vehicle by name (fallback when ID is empty)
+  Future<List<FuelTransaction>> getVehicleRefuelingDataByName(String vehicleName) async {
+    final List<Map<String, dynamic>> response = await _supabase
+        .from('fuel_transactions')
+        .select('*')
+        .eq('vehicle_name', vehicleName) // Get all transactions for this vehicle by name
+        .order('date', ascending: false);
+
+    print('SupabaseService: Found ${response.length} total transactions for vehicle name "$vehicleName"');
+    return response.map((json) => FuelTransaction.fromJson(json)).toList();
+  }
+
   Future<List<FuelTransaction>> getFuelTransactions({DateTime? startDate, DateTime? endDate}) async {
     var query = _supabase.from('fuel_transactions').select('*');
 
@@ -123,6 +220,18 @@ class SupabaseService { // Temporary comment
     }
 
     final List<Map<String, dynamic>> response = await query.order('date', ascending: false);
+    
+    // Debug: Print sample transaction data to see what we're getting
+    if (response.isNotEmpty) {
+      print('🔍 DEBUG: Sample transaction from getFuelTransactions:');
+      final sample = response.first;
+      print('   - ID: ${sample['id']}');
+      print('   - Vehicle ID: "${sample['vehicle_id']}" (${sample['vehicle_id']?.toString().length ?? 0} chars)');
+      print('   - Vehicle Name: "${sample['vehicle_name']}"');
+      print('   - Volume: ${sample['volume']}');
+      print('   - Date: ${sample['date']}');
+    }
+    
     return response.map((json) => FuelTransaction.fromJson(json)).toList();
   }
 
@@ -130,12 +239,12 @@ class SupabaseService { // Temporary comment
     print('SupabaseService: Starting vehicle sync...');
     try {
       final List<Vehicle> vehicles = (await _apiService.getVehicles()).cast<Vehicle>();
+      final Map<String, Vehicle> uniqueVehicles = { for (var v in vehicles) v.id: v };
       final List<Map<String, dynamic>> vehiclesToInsert = [];
-      final Set<Map<String, dynamic>> productsToInsert = {};
-      final List<Map<String, dynamic>> vehicleProductsToInsert = [];
-      final Set<String> seenVehicleProductKeys = {};
+      final Map<String, Map<String, dynamic>> uniqueProducts = {};
+      final Map<String, Map<String, dynamic>> uniqueVehicleProducts = {};
 
-      for (var vehicle in vehicles) {
+      for (var vehicle in uniqueVehicles.values) {
         vehiclesToInsert.add({
           'id': vehicle.id,
           'name': vehicle.name,
@@ -147,40 +256,41 @@ class SupabaseService { // Temporary comment
           'model': vehicle.model,
           'department_id': vehicle.departmentId,
           'department_name': vehicle.departmentName,
-          'kmeter': vehicle.odometer,
+          'kmeter': vehicle.odometer?.toInt(),
           'hmeter': vehicle.hourMeter,
           'notes': vehicle.notes,
         });
 
         for (var vtank in vehicle.vtanks) {
-          productsToInsert.add({
-            'id': vtank.id,
-            'name': vtank.product,
-            'capacity': vtank.capacity,
-          });
+          if (!uniqueProducts.containsKey(vtank.id)) {
+            uniqueProducts[vtank.id] = {
+              'id': vtank.id,
+              'name': vtank.product,
+              'capacity': vtank.capacity,
+            };
+          }
           final String key = '${vehicle.id}-${vtank.id}';
-          if (!seenVehicleProductKeys.contains(key)) {
-            vehicleProductsToInsert.add({
+          if (!uniqueVehicleProducts.containsKey(key)) {
+            uniqueVehicleProducts[key] = {
               'vehicle_id': vehicle.id,
               'product_id': vtank.id,
               'capacity': vtank.capacity,
-            });
-            seenVehicleProductKeys.add(key);
+            };
           }
         }
       }
 
-      if (productsToInsert.isNotEmpty) {
-        await _supabase.from('products').upsert(productsToInsert.toList(), onConflict: 'id');
-        print('SupabaseService: Synced ${productsToInsert.length} products.');
+      if (uniqueProducts.isNotEmpty) {
+        await _supabase.from('products').upsert(uniqueProducts.values.toList(), onConflict: 'id');
+        print('SupabaseService: Synced ${uniqueProducts.length} products.');
       }
 
       await _supabase.from('vehicles').upsert(vehiclesToInsert, onConflict: 'id');
-      print('SupabaseService: Synced ${vehicles.length} vehicles.');
+      print('SupabaseService: Synced ${uniqueVehicles.length} vehicles.');
 
-      if (vehicleProductsToInsert.isNotEmpty) {
-        await _supabase.from('vehicle_products').upsert(vehicleProductsToInsert.toList(), onConflict: 'vehicle_id,product_id');
-        print('SupabaseService: Synced ${vehicleProductsToInsert.length} vehicle products.');
+      if (uniqueVehicleProducts.isNotEmpty) {
+        await _supabase.from('vehicle_products').upsert(uniqueVehicleProducts.values.toList(), onConflict: 'vehicle_id,product_id');
+        print('SupabaseService: Synced ${uniqueVehicleProducts.length} vehicle products.');
       }
     } catch (e) {
       print('SupabaseService: Error during vehicle sync: $e');
@@ -191,6 +301,7 @@ class SupabaseService { // Temporary comment
   Future<void> syncDrivers() async {
     print('SupabaseService: Starting driver sync...');
     try {
+      await syncAllDepartments();
       final List<Driver> drivers = (await _apiService.getDrivers()).cast<Driver>();
       final List<Map<String, dynamic>> dataToInsert = drivers.map((driver) => {
             'id': driver.id,
@@ -222,26 +333,39 @@ class SupabaseService { // Temporary comment
       final List<Vehicle> vehicles = (await _apiService.getVehicles()).cast<Vehicle>();
       final List<Driver> drivers = (await _apiService.getDrivers()).cast<Driver>();
 
-      final Set<Department> uniqueDepartments = {};
+      final Map<String, String> departmentMap = {};
 
+      // Gather all departments with names first
       for (var vehicle in vehicles) {
         if (vehicle.departmentId != null && vehicle.departmentName.isNotEmpty) {
-          uniqueDepartments.add(Department(id: vehicle.departmentId!, name: vehicle.departmentName));
+          departmentMap[vehicle.departmentId!] = vehicle.departmentName;
         }
       }
       for (var driver in drivers) {
         if (driver.departmentId != null && driver.departmentName.isNotEmpty) {
-          uniqueDepartments.add(Department(id: driver.departmentId!, name: driver.departmentName));
+          departmentMap.putIfAbsent(driver.departmentId!, () => driver.departmentName);
         }
       }
 
-      if (uniqueDepartments.isNotEmpty) {
-        final List<Map<String, dynamic>> dataToInsert = uniqueDepartments.map((dept) => {
-              'id': dept.id,
-              'name': dept.name,
+      // Add any departments that only have an ID, using a placeholder name
+      for (var vehicle in vehicles) {
+        if (vehicle.departmentId != null) {
+          departmentMap.putIfAbsent(vehicle.departmentId!, () => 'Department ${vehicle.departmentId!}');
+        }
+      }
+      for (var driver in drivers) {
+        if (driver.departmentId != null) {
+          departmentMap.putIfAbsent(driver.departmentId!, () => 'Department ${driver.departmentId!}');
+        }
+      }
+
+      if (departmentMap.isNotEmpty) {
+        final List<Map<String, dynamic>> dataToInsert = departmentMap.entries.map((entry) => {
+              'id': entry.key,
+              'name': entry.value,
             }).toList();
         await _supabase.from('departments').upsert(dataToInsert, onConflict: 'id');
-        print('SupabaseService: Synced ${uniqueDepartments.length} unique departments.');
+        print('SupabaseService: Synced ${departmentMap.length} unique departments.');
       }
     } catch (e) {
       print('SupabaseService: Error during all departments sync: $e');

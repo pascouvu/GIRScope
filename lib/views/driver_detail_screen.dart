@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:girscope/models/fuel_transaction.dart';
+import 'package:girscope/models/fuel_transaction.dart';
 import 'package:girscope/models/driver.dart';
 import 'package:girscope/models/fuel_transaction.dart';
 import 'package:girscope/services/supabase_service.dart';

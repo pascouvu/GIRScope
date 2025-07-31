@@ -1,5 +1,5 @@
 name: girscope
-description: "GIRViewer - A read-only mobile app for GIR W150 fuel management system"
+description: "GIRScope - A read-only mobile app for GIR W150 fuel management system"
 publish_to: "none"
 version: 1.0.0
 

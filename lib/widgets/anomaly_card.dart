@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:girscope/models/fuel_transaction.dart';
+import 'package:girscope/services/anomaly_detection_service.dart';
 import 'package:girscope/views/anomaly_detail_screen.dart';
 
 class AnomalyCard extends StatelessWidget {
@@ -107,9 +108,16 @@ class AnomalyCard extends StatelessWidget {
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: transaction.anomalies.map((anomaly) => 
-                      _buildAnomalyChip(context, anomaly)
-                    ).toList(),
+                    children: [
+                      // Traditional anomalies
+                      ...transaction.anomalies.map((anomaly) => 
+                        _buildAnomalyChip(context, anomaly)
+                      ),
+                      // Statistical anomalies
+                      ...transaction.allStatisticalAnomalies.map((anomaly) =>
+                        _buildStatisticalAnomalyChip(context, anomaly)
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -239,6 +247,92 @@ class AnomalyCard extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: textColor,
               fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatisticalAnomalyChip(BuildContext context, StatisticalAnomaly anomaly) {
+    Color chipColor;
+    Color textColor;
+    String emoji;
+    String label;
+
+    switch (anomaly.type) {
+      case StatisticalAnomalyType.consumption:
+        chipColor = Colors.blue.shade100;
+        textColor = Colors.blue.shade800;
+        emoji = '📊';
+        label = 'Consumption';
+        break;
+      case StatisticalAnomalyType.volume:
+        chipColor = Colors.teal.shade100;
+        textColor = Colors.teal.shade800;
+        emoji = '📈';
+        label = 'Volume';
+        break;
+      case StatisticalAnomalyType.frequency:
+        chipColor = Colors.indigo.shade100;
+        textColor = Colors.indigo.shade800;
+        emoji = '⏱️';
+        label = 'Frequency';
+        break;
+      case StatisticalAnomalyType.timing:
+        chipColor = Colors.cyan.shade100;
+        textColor = Colors.cyan.shade800;
+        emoji = '🕐';
+        label = 'Timing';
+        break;
+    }
+
+    // Add severity indicator
+    String severityIndicator = '';
+    switch (anomaly.severity) {
+      case AnomalySeverity.critical:
+        severityIndicator = '🔴';
+        break;
+      case AnomalySeverity.high:
+        severityIndicator = '🟠';
+        break;
+      case AnomalySeverity.medium:
+        severityIndicator = '🟡';
+        break;
+      case AnomalySeverity.low:
+        severityIndicator = '🟢';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: chipColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: textColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            emoji,
+            style: const TextStyle(fontSize: 12),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            severityIndicator,
+            style: const TextStyle(fontSize: 10),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.w500,
+              fontSize: 11,
             ),
           ),
         ],

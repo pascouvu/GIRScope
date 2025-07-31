@@ -21,7 +21,7 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'GIRViewer',
+                'GIRScope',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold,

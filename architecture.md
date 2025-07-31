@@ -1,7 +1,7 @@
 # GIRViewer - Architecture & Implementation Plan
 
 ## Overview
-GIRViewer is a read-only mobile app built with Flutter/Dart that connects to the GIR W150 fuel management system via REST API. The app displays fuel management data across four main tabs: Sites, Drivers, Vehicles, and Anomalies.
+GIRScope is a read-only mobile app built with Flutter/Dart that connects to the GIR W150 fuel management system via REST API. The app displays fuel management data across four main tabs: Sites, Drivers, Vehicles, and Anomalies.
 
 ## Technical Architecture
 
