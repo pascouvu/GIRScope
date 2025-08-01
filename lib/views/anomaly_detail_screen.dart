@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:girscope/models/fuel_transaction.dart';
 import 'package:girscope/services/supabase_service.dart';
 import 'package:girscope/widgets/anomaly_explanation_widgets.dart';
+import 'package:girscope/views/profile_screen.dart';
 
 class AnomalyDetailScreen extends StatefulWidget {
   final FuelTransaction transaction;
@@ -90,6 +91,20 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
         title: const Text('Anomaly Details'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileScreen(),
+                ),
+              );
+            },
+            tooltip: 'Profile',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -119,46 +134,47 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         side: BorderSide(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Compact header
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
                     Icons.warning,
                     color: Theme.of(context).colorScheme.onErrorContainer,
-                    size: 20,
+                    size: 16,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Transaction Overview',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
                       Text(
                         _formatDateTime(widget.transaction.date),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.secondary,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -166,48 +182,63 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-            _buildInfoRow(context, 'Vehicle', widget.transaction.vehicleName, Icons.directions_car),
-            const SizedBox(height: 8),
-            _buildInfoRow(context, 'Driver', widget.transaction.driverName, Icons.person),
-            const SizedBox(height: 8),
-            _buildInfoRow(context, 'Site', widget.transaction.siteName, Icons.location_on),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildValueCard(
-                    context,
-                    'Volume',
-                    '${widget.transaction.volume.toStringAsFixed(1)} L',
+            const SizedBox(height: 10),
+            
+            // Compact info rows
+            _buildCompactInfoRow(context, 'Vehicle', widget.transaction.vehicleName, Icons.directions_car),
+            const SizedBox(height: 4),
+            _buildCompactInfoRow(context, 'Driver', widget.transaction.driverName, Icons.person),
+            const SizedBox(height: 4),
+            _buildCompactInfoRow(context, 'Site', widget.transaction.siteName, Icons.location_on),
+            const SizedBox(height: 10),
+            
+            // Compact value display - single row with volume prominently displayed
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(
                     Icons.local_gas_station,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                ),
-                if (widget.transaction.kdelta != null) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildValueCard(
-                      context,
-                      'Distance',
-                      '${widget.transaction.kdelta!.toStringAsFixed(0)} km',
+                  const SizedBox(width: 6),
+                  Text(
+                    'Volume: ',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    '${widget.transaction.volume.toStringAsFixed(1)} L',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  if (widget.transaction.kdelta != null) ...[
+                    const SizedBox(width: 12),
+                    Icon(
                       Icons.route,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                  ),
-                ],
-                if (widget.transaction.kcons != null && widget.transaction.kdelta != null) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildValueCard(
-                      context,
-                      'Consumption',
-                      '${((widget.transaction.volume / widget.transaction.kdelta!) * 100).toStringAsFixed(1)} L/100km',
-                      Icons.analytics,
+                    const SizedBox(width: 4),
+                    Text(
+                      '${widget.transaction.kdelta!.toStringAsFixed(0)} km',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ),
@@ -309,7 +340,7 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Consumption Calculation',
+                  'Consumption Analysis',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: isHighConsumption ? Colors.purple : null,
@@ -319,6 +350,7 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
             ),
             const SizedBox(height: 16),
             
+            // Simple consumption display
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -326,37 +358,28 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.blue.shade200),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
+                  Icon(
+                    Icons.local_gas_station,
+                    color: Colors.blue.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
                   Text(
-                    'Formula: Volume ÷ Distance × 100',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    'Consumption on last refuel: ${calculatedConsumption.toStringAsFixed(1)} L/100km',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.blue.shade800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Calculation: ${widget.transaction.volume.toStringAsFixed(1)}L ÷ ${widget.transaction.kdelta!.toStringAsFixed(0)}km × 100',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.blue.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Result: ${calculatedConsumption.toStringAsFixed(1)} L/100km',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade700,
                     ),
                   ),
                 ],
               ),
             ),
             
+            const SizedBox(height: 12),
+            
             if (isHighConsumption) ...[
-              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -364,38 +387,27 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.purple.shade200),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.warning,
-                          color: Colors.purple.shade600,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'High Consumption Alert',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.purple.shade800,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.warning,
+                      color: Colors.purple.shade600,
+                      size: 16,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'This consumption rate (${calculatedConsumption.toStringAsFixed(1)} L/100km) exceeds the normal threshold of ${dynamicThreshold.toStringAsFixed(1)} L/100km.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.purple.shade700,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Anomaly - High consumption detected (threshold: ${dynamicThreshold.toStringAsFixed(1)} L/100km)',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.purple.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             ] else ...[
-              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -413,9 +425,10 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Normal consumption rate (expected: ${expectedConsumption.toStringAsFixed(1)} L/100km, threshold: ${dynamicThreshold.toStringAsFixed(1)} L/100km)',
+                        'Normal consumption rate (expected: ${expectedConsumption.toStringAsFixed(1)} L/100km)',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.green.shade700,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -449,6 +462,36 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
           child: Text(
             value,
             style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactInfoRow(BuildContext context, String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$label: ',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value.isEmpty ? 'N/A' : value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

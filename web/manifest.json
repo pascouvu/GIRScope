@@ -1,6 +1,6 @@
 {
-    "name": "dreamflow_counter",
-    "short_name": "dreamflow_counter",
+    "name": "GIRScope",
+    "short_name": "GIRScope",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

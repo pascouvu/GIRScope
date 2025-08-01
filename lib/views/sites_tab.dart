@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:girscope/models/site.dart';
 import 'package:girscope/services/api_service.dart';
 import 'package:girscope/widgets/site_card.dart';
-import 'package:girscope/widgets/connection_test_widget.dart';
 
 class SitesTab extends StatefulWidget {
   const SitesTab({super.key});
@@ -157,17 +156,11 @@ class _SitesTabState extends State<SitesTab> {
       onRefresh: _loadSites,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _sites.length + 1, // +1 for connection test widget
+        itemCount: _sites.length,
         itemBuilder: (context, index) {
-          if (index == 0) {
-            // Show connection test widget first
-            return const ConnectionTestWidget();
-          }
-          
-          final siteIndex = index - 1;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: SiteCard(site: _sites[siteIndex]),
+            child: SiteCard(site: _sites[index]),
           );
         },
       ),

@@ -11,19 +11,21 @@ class AnomalyAnalyzers {
     FuelTransaction transaction,
     List<FuelTransaction> baseline,
   ) {
-    if (transaction.kcons == null) {
+    // Calculate consumption from volume and distance instead of using potentially incorrect kcons
+    if (transaction.kdelta == null || transaction.kdelta! <= 0) {
       return (null, AnomalyAnalysisLog(
         analysisType: 'Consumption',
         hasData: false,
         sampleCount: 0,
         isAnomaly: false,
-        notes: 'No consumption data available for this transaction',
+        notes: 'No distance data available for consumption calculation',
       ));
     }
     
+    // Calculate consumption for baseline transactions (Volume / Distance * 100)
     final consumptions = baseline
-        .where((t) => t.kcons != null && t.kcons! > 0)
-        .map((t) => t.kcons!)
+        .where((t) => t.kdelta != null && t.kdelta! > 0)
+        .map((t) => (t.volume / t.kdelta!) * 100)
         .toList();
     
     if (consumptions.length < StatisticalAnalysisService.minimumHistoricalSamples) {
@@ -37,18 +39,20 @@ class AnomalyAnalyzers {
     }
     
     final stats = _statsService.calculateStatistics(consumptions);
-    final zScore = (transaction.kcons! - stats.mean) / stats.standardDeviation;
+    // Calculate current transaction consumption properly
+    final currentConsumption = (transaction.volume / transaction.kdelta!) * 100;
+    final zScore = (currentConsumption - stats.mean) / stats.standardDeviation;
     final isAnomaly = zScore.abs() > StatisticalAnalysisService.standardDeviationThreshold;
     
     print('📊 Consumption stats: mean=${stats.mean.toStringAsFixed(2)}, std=${stats.standardDeviation.toStringAsFixed(2)}, min=${stats.min.toStringAsFixed(2)}, max=${stats.max.toStringAsFixed(2)}');
     print('📈 Z-score: ${zScore.toStringAsFixed(3)} (threshold: ${StatisticalAnalysisService.standardDeviationThreshold})');
     
-    // Create historical data points for the anomaly
+    // Create historical data points for the anomaly using calculated consumption
     final historicalDataPoints = baseline
-        .where((t) => t.kcons != null && t.kcons! > 0)
+        .where((t) => t.kdelta != null && t.kdelta! > 0)
         .map((t) => HistoricalDataPoint(
           date: t.date,
-          value: t.kcons!,
+          value: (t.volume / t.kdelta!) * 100,
           transactionId: t.id,
         )).toList();
     
@@ -67,18 +71,18 @@ class AnomalyAnalyzers {
       anomaly = StatisticalAnomaly(
         type: StatisticalAnomalyType.consumption,
         severity: _statsService.calculateSeverity(zScore.abs()),
-        actualValue: transaction.kcons!,
+        actualValue: currentConsumption,
         expectedValue: stats.mean,
         standardDeviation: stats.standardDeviation,
         zScore: zScore,
-        description: _statsService.generateConsumptionDescription(transaction.kcons!, stats, zScore),
+        description: _statsService.generateConsumptionDescription(currentConsumption, stats, zScore),
         historicalData: historicalDataPoints,
       );
     }
     
     // Generate user-friendly log message
     final baselineAvg = stats.mean.toStringAsFixed(1);
-    final currentValue = transaction.kcons!.toStringAsFixed(1);
+    final currentValue = currentConsumption.toStringAsFixed(1);
     final anomalyStatus = isAnomaly ? 'ANOMALY DETECTED' : 'no anomaly';
     
     print('✅ Vehicle: ${transaction.vehicleName} - from last 3 months period, consumption = ${baselineAvg}L/100km and for this filter period = ${currentValue}L/100km - $anomalyStatus');
@@ -88,7 +92,7 @@ class AnomalyAnalyzers {
       hasData: true,
       sampleCount: consumptions.length,
       statistics: statisticalCalc,
-      actualValue: transaction.kcons!,
+      actualValue: currentConsumption,
       zScore: zScore,
       isAnomaly: isAnomaly,
       severity: isAnomaly ? anomaly!.severity.name : null,

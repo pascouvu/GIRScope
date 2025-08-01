@@ -42,21 +42,21 @@ class DarkModeColors {
 }
 
 class FontSizes {
-  static const double displayLarge = 57.0;
-  static const double displayMedium = 45.0;
-  static const double displaySmall = 36.0;
-  static const double headlineLarge = 32.0;
-  static const double headlineMedium = 24.0;
-  static const double headlineSmall = 22.0;
-  static const double titleLarge = 22.0;
-  static const double titleMedium = 18.0;
-  static const double titleSmall = 16.0;
-  static const double labelLarge = 16.0;
-  static const double labelMedium = 14.0;
-  static const double labelSmall = 12.0;
-  static const double bodyLarge = 16.0;
-  static const double bodyMedium = 14.0;
-  static const double bodySmall = 12.0;
+  static const double displayLarge = 40.0;  // Further reduced for mobile
+  static const double displayMedium = 30.0; // Further reduced for mobile
+  static const double displaySmall = 24.0;  // Further reduced for mobile
+  static const double headlineLarge = 20.0; // Further reduced for mobile
+  static const double headlineMedium = 18.0; // Further reduced for mobile
+  static const double headlineSmall = 16.0; // Further reduced for mobile
+  static const double titleLarge = 16.0;    // Further reduced for mobile
+  static const double titleMedium = 14.0;   // Further reduced for mobile
+  static const double titleSmall = 13.0;    // Further reduced for mobile
+  static const double labelLarge = 13.0;    // Further reduced for mobile
+  static const double labelMedium = 11.0;   // Further reduced for mobile
+  static const double labelSmall = 10.0;    // Further reduced for mobile
+  static const double bodyLarge = 13.0;     // Further reduced for mobile
+  static const double bodyMedium = 12.0;    // Further reduced for mobile
+  static const double bodySmall = 10.0;     // Further reduced for mobile
 }
 
 ThemeData get lightTheme => ThemeData(

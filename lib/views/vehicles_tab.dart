@@ -217,7 +217,7 @@ class _VehiclesTabState extends State<VehiclesTab> {
                     itemCount: _filteredVehicles.length,
                     itemBuilder: (context, index) {
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: VehicleCard(vehicle: _filteredVehicles[index]),
                       );
                     },

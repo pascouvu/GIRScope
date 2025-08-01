@@ -28,7 +28,7 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
   DateTime? _customEndDate;
   bool _isLoading = true;
   String? _error;
-  bool _useStatisticalAnalysis = true;
+  bool _useStatisticalAnalysis = true; // Always enabled
 
   @override
   void initState() {
@@ -207,216 +207,218 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           color: Theme.of(context).colorScheme.surface,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Date Filter Section
+              // Compact filters in a single row
               Row(
                 children: [
-                  Icon(
-                    Icons.date_range,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Date Filter',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<DateFilter>(
-                    value: _selectedFilter,
-                    isExpanded: true,
-                    onChanged: (DateFilter? newValue) {
-                      if (newValue != null) {
-                        if (newValue == DateFilter.custom) {
-                          _selectCustomDateRange();
-                        } else {
-                          _selectDateFilter(newValue);
-                        }
-                      }
-                    },
-                    items: [
-                      const DropdownMenuItem(
-                        value: DateFilter.last3Days,
-                        child: Text('Last 3 Days'),
-                      ),
-                      const DropdownMenuItem(
-                        value: DateFilter.last7Days,
-                        child: Text('Last 7 Days'),
-                      ),
-                      const DropdownMenuItem(
-                        value: DateFilter.last30Days,
-                        child: Text('Last 30 Days'),
-                      ),
-                      DropdownMenuItem(
-                        value: DateFilter.custom,
-                        child: Text(_selectedFilter == DateFilter.custom && _customStartDate != null
-                            ? 'Custom (${_customStartDate!.day}/${_customStartDate!.month} - ${_customEndDate!.day}/${_customEndDate!.month})'
-                            : 'Custom Range'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Statistical Analysis Toggle
-              Row(
-                children: [
-                  Icon(
-                    Icons.analytics,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Statistical Analysis',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  Switch(
-                    value: _useStatisticalAnalysis,
-                    onChanged: (value) {
-                      setState(() {
-                        _useStatisticalAnalysis = value;
-                      });
-                      _loadTransactions();
-                    },
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Anomaly Type Filter Section
-              Row(
-                children: [
-                  Icon(
-                    Icons.filter_list,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Anomaly Type',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedAnomalyType,
-                    isExpanded: true,
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        _selectAnomalyType(newValue);
-                      }
-                    },
-                    items: _getAvailableAnomalyTypes().map((String type) {
-                      return DropdownMenuItem<String>(
-                        value: type,
-                        child: Row(
+                  // Date Filter - Compact
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            if (type != 'all') ...[
-                              Text(_getAnomalyEmoji(type)),
-                              const SizedBox(width: 8),
-                            ],
-                            Text(type == 'all' ? 'All Anomalies' : _capitalize(type)),
+                            Icon(
+                              Icons.date_range,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Period',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
                           ],
                         ),
-                      );
-                    }).toList(),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<DateFilter>(
+                              value: _selectedFilter,
+                              isExpanded: true,
+                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
+                              onChanged: (DateFilter? newValue) {
+                                if (newValue != null) {
+                                  if (newValue == DateFilter.custom) {
+                                    _selectCustomDateRange();
+                                  } else {
+                                    _selectDateFilter(newValue);
+                                  }
+                                }
+                              },
+                              items: [
+                                const DropdownMenuItem(
+                                  value: DateFilter.last3Days,
+                                  child: Text('3 Days'),
+                                ),
+                                const DropdownMenuItem(
+                                  value: DateFilter.last7Days,
+                                  child: Text('7 Days'),
+                                ),
+                                const DropdownMenuItem(
+                                  value: DateFilter.last30Days,
+                                  child: Text('30 Days'),
+                                ),
+                                DropdownMenuItem(
+                                  value: DateFilter.custom,
+                                  child: Text(_selectedFilter == DateFilter.custom && _customStartDate != null
+                                      ? 'Custom'
+                                      : 'Custom'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  
+                  const SizedBox(width: 8),
+                  
+                  // Anomaly Type Filter - Compact
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.filter_list,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Type',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedAnomalyType,
+                              isExpanded: true,
+                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  _selectAnomalyType(newValue);
+                                }
+                              },
+                              items: _getAvailableAnomalyTypes().map((String type) {
+                                return DropdownMenuItem<String>(
+                                  value: type,
+                                  child: Row(
+                                    children: [
+                                      if (type != 'all') ...[
+                                        Text(_getAnomalyEmoji(type), style: const TextStyle(fontSize: 10)),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      Expanded(
+                                        child: Text(
+                                          type == 'all' ? 'All' : _capitalize(type),
+                                          style: const TextStyle(fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               
               if (_filteredTransactions.isNotEmpty) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '${_filteredTransactions.length} anomal${_filteredTransactions.length == 1 ? 'y' : 'ies'} found',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.w500,
-                          fontSize: 12,
+                          fontSize: 10,
                         ),
                       ),
                     ),
                     const Spacer(),
-                    if (_useStatisticalAnalysis) ...[
-                      TextButton.icon(
-                        onPressed: () {
-                          final log = _anomalyService.getCurrentAnalysisLog();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => SimpleAnalysisLogViewer(log: log),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.list_alt, size: 16),
-                        label: const Text('Analysis Log'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Theme.of(context).colorScheme.primary,
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
+                    TextButton.icon(
+                      onPressed: () {
+                        final log = _anomalyService.getCurrentAnalysisLog();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => SimpleAnalysisLogViewer(log: log),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.list_alt, size: 14),
+                      label: const Text('Log'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                        textStyle: const TextStyle(fontSize: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      const SizedBox(width: 8),
-                      TextButton.icon(
-                        onPressed: () {
-                          final log = _anomalyService.getCurrentAnalysisLog();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => AnomalyAnalysisLogViewer(log: log),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.analytics, size: 16),
-                        label: const Text('Technical'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Theme.of(context).colorScheme.secondary,
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () {
+                        final log = _anomalyService.getCurrentAnalysisLog();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => AnomalyAnalysisLogViewer(log: log),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.analytics, size: 14),
+                      label: const Text('Tech'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.secondary,
+                        textStyle: const TextStyle(fontSize: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ],
@@ -536,11 +538,11 @@ class _AnomaliesTabState extends State<AnomaliesTab> {
     return RefreshIndicator(
       onRefresh: _loadTransactions,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         itemCount: _filteredTransactions.length,
         itemBuilder: (context, index) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 8),
             child: AnomalyCard(transaction: _filteredTransactions[index]),
           );
         },
