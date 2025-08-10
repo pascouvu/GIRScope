@@ -46,3 +46,4 @@ app.*.map.json
 
 /lib/secret.dart
 /PHP
+config.json
