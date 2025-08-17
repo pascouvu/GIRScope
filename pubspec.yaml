@@ -1,7 +1,7 @@
 name: girscope
 description: "GIRScope - A read-only mobile app for GIR W150 fuel management system"
 publish_to: "none"
-version: 1.0.2+2
+version: 1.0.3+3
 
 environment:
   sdk: ^3.6.0
@@ -17,6 +17,7 @@ dependencies:
   google_fonts: ^6.2.1
   fl_chart: ^0.69.0
   shared_preferences: ^2.2.2
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_test:

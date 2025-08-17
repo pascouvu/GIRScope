@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:girscope/services/terms_service.dart';
 import 'package:girscope/views/terms_acceptance_screen.dart';
 import 'package:girscope/views/sync_screen.dart';
+import 'package:girscope/views/home_screen.dart';
 
 class StartupScreen extends StatefulWidget {
   const StartupScreen({super.key});
@@ -28,10 +30,17 @@ class _StartupScreenState extends State<StartupScreen> {
       
       if (mounted) {
         if (hasAccepted) {
-          // User has accepted terms, go to sync screen
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const SyncScreen()),
-          );
+          // On web, skip sync and go directly to home page
+          if (kIsWeb) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomePage()),
+            );
+          } else {
+            // On mobile, go to sync screen
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const SyncScreen()),
+            );
+          }
         } else {
           // User needs to accept terms first
           Navigator.of(context).pushReplacement(

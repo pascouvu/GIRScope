@@ -6,6 +6,7 @@ import 'package:girscope/widgets/driver_info_card.dart';
 import 'package:girscope/widgets/date_filter_dropdown.dart';
 import 'package:girscope/widgets/refueling_card.dart';
 import 'package:girscope/views/profile_screen.dart';
+import 'package:girscope/widgets/responsive_wrapper.dart';
 import 'package:intl/intl.dart';
 
 class DriverDetailScreen extends StatefulWidget {
@@ -124,8 +125,8 @@ class _DriverDetailScreenState extends State<DriverDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return ResponsiveScaffold(
+      appBar: ResponsiveAppBar(
         title: Text(widget.driver.name),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,

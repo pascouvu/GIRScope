@@ -1,13 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:girscope/views/content_screen.dart';
+import 'package:girscope/widgets/responsive_wrapper.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String _appName = 'GIRScope';
+  String _version = '1.0.0';
+  String _buildNumber = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPackageInfo();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appName = packageInfo.appName;
+        _version = packageInfo.version;
+        _buildNumber = packageInfo.buildNumber;
+      });
+    } catch (e) {
+      // Keep default values if package info fails to load
+      print('Error loading package info: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return ResponsiveScaffold(
+      appBar: ResponsiveAppBar(
         title: const Text('Profile'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
@@ -143,7 +174,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             
-            // Version Info
+            // Version Info with Developer Logo
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -154,27 +185,72 @@ class ProfileScreen extends StatelessWidget {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(width: 16),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'GIRScope',
-                            style: TextStyle(
+                            _appName,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'Version 1.0.0',
-                            style: TextStyle(
+                            _buildNumber.isNotEmpty 
+                                ? 'Version $_version ($_buildNumber)'
+                                : 'Version $_version',
+                            style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 14,
                             ),
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(width: 16),
+                    // IEC Developer Logo
+                    Column(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(7),
+                            child: Image.asset(
+                              'assets/images/ieclogo.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  child: const Icon(
+                                    Icons.business,
+                                    color: Colors.grey,
+                                    size: 30,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'www.iec.vu',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

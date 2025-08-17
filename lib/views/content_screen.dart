@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:girscope/services/iec_api_service.dart';
+import 'package:girscope/widgets/responsive_wrapper.dart';
 
 class ContentScreen extends StatefulWidget {
   final String title;
@@ -62,8 +63,8 @@ class _ContentScreenState extends State<ContentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return ResponsiveScaffold(
+      appBar: ResponsiveAppBar(
         title: Text(widget.title),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,

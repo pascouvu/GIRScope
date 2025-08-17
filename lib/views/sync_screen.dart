@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:girscope/services/supabase_service.dart';
+import 'package:girscope/widgets/responsive_wrapper.dart';
 import 'package:girscope/views/home_screen.dart';
 
 class SyncScreen extends StatefulWidget {
@@ -27,6 +29,18 @@ class _SyncScreenState extends State<SyncScreen> {
   }
 
   Future<void> _startSyncProcess() async {
+    if (kIsWeb) {
+      // On web, skip sync and go directly to home page
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
+      return;
+    }
+
+    // On mobile, perform actual sync
     await _performSync('Departments', _supabaseService.syncAllDepartments);
     await _performSync('Sites', _supabaseService.syncSites);
     await _performSync('Vehicles', _supabaseService.syncVehicles);
@@ -64,7 +78,7 @@ class _SyncScreenState extends State<SyncScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ResponsiveScaffold(
       body: SafeArea(
         child: Stack(
           children: [
@@ -91,38 +105,64 @@ class _SyncScreenState extends State<SyncScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    Text(
-                      'Syncing Data',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 30),
-                    // Sync status items
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: _syncStatuses.entries.map((entry) {
-                        final item = entry.key;
-                        final status = entry.value;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: _buildStatusIcon(status),
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                '$item - ${_getStatusText(status)}',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                    // Show different content for web vs mobile
+                    if (kIsWeb) ...[
+                      Text(
+                        'Loading Application',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 20),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Web version - Read-only mode',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Data synchronization is disabled on web',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        'Syncing Data',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 30),
+                      // Sync status items
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: _syncStatuses.entries.map((entry) {
+                          final item = entry.key;
+                          final status = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: _buildStatusIcon(status),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  '$item - ${_getStatusText(status)}',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ],
                 ),
               ),

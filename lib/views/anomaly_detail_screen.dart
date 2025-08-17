@@ -4,6 +4,7 @@ import 'package:girscope/models/fuel_transaction.dart';
 import 'package:girscope/services/supabase_service.dart';
 import 'package:girscope/widgets/anomaly_explanation_widgets.dart';
 import 'package:girscope/views/profile_screen.dart';
+import 'package:girscope/widgets/responsive_wrapper.dart';
 
 class AnomalyDetailScreen extends StatefulWidget {
   final FuelTransaction transaction;
@@ -86,8 +87,8 @@ class _AnomalyDetailScreenState extends State<AnomalyDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return ResponsiveScaffold(
+      appBar: ResponsiveAppBar(
         title: const Text('Anomaly Details'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,

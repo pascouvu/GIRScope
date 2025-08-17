@@ -7,6 +7,7 @@ import 'package:girscope/widgets/date_filter_dropdown.dart';
 import 'package:girscope/widgets/fuel_consumption_chart.dart';
 import 'package:girscope/widgets/refueling_content.dart';
 import 'package:girscope/views/profile_screen.dart';
+import 'package:girscope/widgets/responsive_wrapper.dart';
 import 'package:intl/intl.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
@@ -125,8 +126,8 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return ResponsiveScaffold(
+      appBar: ResponsiveAppBar(
         title: Text(widget.vehicle.name),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,

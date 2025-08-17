@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:girscope/services/iec_api_service.dart';
 import 'package:girscope/services/terms_service.dart';
 import 'package:girscope/views/sync_screen.dart';
+import 'package:girscope/views/home_screen.dart';
+import 'package:girscope/widgets/responsive_wrapper.dart';
 
 class TermsAcceptanceScreen extends StatefulWidget {
   const TermsAcceptanceScreen({super.key});
@@ -73,9 +76,17 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       await TermsService.acceptTerms();
       
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const SyncScreen()),
-        );
+        // On web, skip sync and go directly to home page
+        if (kIsWeb) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        } else {
+          // On mobile, go to sync screen
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const SyncScreen()),
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -120,7 +131,7 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ResponsiveScaffold(
       body: SafeArea(
         child: Column(
           children: [

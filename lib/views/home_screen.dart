@@ -3,6 +3,7 @@ import 'package:girscope/views/drivers_tab.dart';
 import 'package:girscope/views/vehicles_tab.dart';
 import 'package:girscope/views/anomalies_tab.dart';
 import 'package:girscope/views/profile_screen.dart';
+import 'package:girscope/widgets/responsive_wrapper.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -11,8 +12,8 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
-      child: Scaffold(
-        appBar: AppBar(
+      child: ResponsiveScaffold(
+        appBar: ResponsiveAppBar(
           title: Row(
             children: [
               Image.asset(
