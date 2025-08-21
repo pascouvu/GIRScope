@@ -3,6 +3,7 @@ import 'package:girscope/views/drivers_tab.dart';
 import 'package:girscope/views/vehicles_tab.dart';
 import 'package:girscope/views/anomalies_tab.dart';
 import 'package:girscope/views/profile_screen.dart';
+import 'package:girscope/views/sites_tab.dart';
 import 'package:girscope/widgets/responsive_wrapper.dart';
 
 class HomePage extends StatefulWidget {
@@ -22,7 +23,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: ResponsiveScaffold(
         appBar: ResponsiveAppBar(
           title: Row(
@@ -58,6 +59,7 @@ class _HomePageState extends State<HomePage> {
           ],
           bottom: TabBar(
             tabs: const [
+              Tab(icon: Icon(Icons.place), text: 'Sites'),
               Tab(icon: Icon(Icons.people), text: 'Drivers'),
               Tab(icon: Icon(Icons.directions_car), text: 'Vehicles'),
               Tab(icon: Icon(Icons.warning), text: 'Anomalies'),
@@ -67,8 +69,9 @@ class _HomePageState extends State<HomePage> {
             unselectedLabelColor: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
+            SitesTab(),
             DriversTab(),
             VehiclesTab(),
             AnomaliesTab(),
