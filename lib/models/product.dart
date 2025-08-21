@@ -1,20 +1,23 @@
 import 'package:girscope/utils/json_utils.dart';
 
-class Department {
+class Product {
   final String id;
   final String name;
+  final double? capacity;
   final String? businessId;
 
-  Department({
+  Product({
     required this.id,
     required this.name,
+    this.capacity,
     this.businessId,
   });
 
-  factory Department.fromJson(Map<String, dynamic> json) {
-    return Department(
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
       id: json['id']?.toString() ?? '',
       name: safeStringValue(json['name']),
+      capacity: json['capacity']?.toDouble(),
       businessId: safeStringValue(json['business_id']),
     );
   }
@@ -23,6 +26,7 @@ class Department {
     return {
       'id': id,
       'name': name,
+      'capacity': capacity,
       'business_id': businessId,
     };
   }

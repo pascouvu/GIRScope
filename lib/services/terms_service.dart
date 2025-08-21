@@ -7,12 +7,16 @@ class TermsService {
 
   /// Check if user has accepted the current version of terms
   static Future<bool> hasAcceptedTerms() async {
+    print('*** TermsService: Checking terms acceptance');
     final prefs = await SharedPreferences.getInstance();
     final accepted = prefs.getBool(_termsAcceptedKey) ?? false;
     final acceptedVersion = prefs.getString(_termsVersionKey) ?? '';
+    print('*** TermsService: accepted=$accepted, acceptedVersion=$acceptedVersion, currentVersion=$_currentTermsVersion');
     
     // Check if user accepted terms and it's the current version
-    return accepted && acceptedVersion == _currentTermsVersion;
+    final result = accepted && acceptedVersion == _currentTermsVersion;
+    print('*** TermsService: result=$result');
+    return result;
   }
 
   /// Mark terms as accepted for current version

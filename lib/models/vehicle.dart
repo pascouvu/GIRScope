@@ -14,6 +14,7 @@ class Vehicle {
   final double? odometer;
   final double? hourMeter;
   final String? notes;
+  final String? businessId;
   final List<VTank> vtanks;
 
   Vehicle({
@@ -30,6 +31,7 @@ class Vehicle {
     this.odometer,
     this.hourMeter,
     this.notes,
+    this.businessId,
     required this.vtanks,
   });
 
@@ -55,6 +57,7 @@ class Vehicle {
         odometer: json['kmeter']?.toDouble(),
         hourMeter: json['hmeter']?.toDouble(),
         notes: safeStringValue(json['notes']),
+        businessId: safeStringValue(json['business_id']),
         vtanks: vtanks,
       );
     } catch (e) {

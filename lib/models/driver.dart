@@ -14,6 +14,7 @@ class Driver {
   final bool? activityPrompt;
   final bool? ncePrompt;
   final String? notes;
+  final String? businessId;
 
   Driver({
     required this.id,
@@ -29,6 +30,7 @@ class Driver {
     this.activityPrompt,
     this.ncePrompt,
     this.notes,
+    this.businessId,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class Driver {
       activityPrompt: json['activity_prompt'] as bool?,
       ncePrompt: json['nce_prompt'] as bool?,
       notes: safeStringValue(json['notes']),
+      businessId: safeStringValue(json['business_id']),
     );
   }
 

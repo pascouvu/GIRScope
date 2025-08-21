@@ -20,35 +20,40 @@ class _StartupScreenState extends State<StartupScreen> {
   }
 
   Future<void> _checkTermsAcceptance() async {
+    print('*** StartupScreen: _checkTermsAcceptance called');
     // Small delay to show the splash screen briefly
     await Future.delayed(const Duration(milliseconds: 500));
     
-    if (!mounted) return;
+    if (!mounted) {
+      print('*** StartupScreen: not mounted, returning');
+      return;
+    }
 
     try {
+      print('*** StartupScreen: Checking terms acceptance');
       final hasAccepted = await TermsService.hasAcceptedTerms();
+      print('*** StartupScreen: Terms accepted: $hasAccepted');
       
-      if (mounted) {
-        if (hasAccepted) {
-          // On web, skip sync and go directly to home page
-          if (kIsWeb) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const HomePage()),
-            );
-          } else {
-            // On mobile, go to sync screen
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const SyncScreen()),
-            );
-          }
-        } else {
-          // User needs to accept terms first
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const TermsAcceptanceScreen()),
-          );
-        }
+      if (!mounted) {
+        print('*** StartupScreen: not mounted after terms check');
+        return;
+      }
+      
+      if (hasAccepted) {
+        print('*** StartupScreen: Terms accepted, navigating to sync screen');
+        // Always go to sync screen regardless of platform
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const SyncScreen()),
+        );
+      } else {
+        print('*** StartupScreen: Terms not accepted, navigating to TermsAcceptanceScreen');
+        // User needs to accept terms first
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const TermsAcceptanceScreen()),
+        );
       }
     } catch (e) {
+      print('*** StartupScreen: Error checking terms: $e');
       // If there's an error checking terms, show terms acceptance to be safe
       if (mounted) {
         Navigator.of(context).pushReplacement(

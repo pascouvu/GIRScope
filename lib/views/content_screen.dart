@@ -20,6 +20,7 @@ class _ContentScreenState extends State<ContentScreen> {
   String _content = '';
   bool _isLoading = true;
   String? _errorMessage;
+  final IecApiService _iecApiService = IecApiService();
 
   @override
   void initState() {
@@ -37,13 +38,13 @@ class _ContentScreenState extends State<ContentScreen> {
       String content;
       switch (widget.contentType) {
         case 'aboutus':
-          content = await IecApiService.getAboutUs();
+          content = await _iecApiService.getAboutUs();
           break;
         case 'privacypolicy':
-          content = await IecApiService.getPrivacyPolicy();
+          content = await _iecApiService.getPrivacyPolicy();
           break;
         case 'termsandconditions':
-          content = await IecApiService.getTermsAndConditions();
+          content = await _iecApiService.getTermsAndConditions();
           break;
         default:
           throw Exception('Unknown content type: ${widget.contentType}');

@@ -52,7 +52,7 @@ class _ConnectionTestWidgetState extends State<ConnectionTestWidget> {
             ),
             const SizedBox(height: 16),
             Text(
-              'API Endpoint: ${ApiService.baseUrl}',
+              'API Endpoint: Business-specific (set after login)',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),

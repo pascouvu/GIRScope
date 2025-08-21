@@ -1,49 +1,69 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:girscope/models/fuel_transaction.dart';
-import 'package:girscope/models/fuel_transaction.dart';
-import 'package:girscope/models/fuel_transaction.dart';
 import 'package:girscope/models/vehicle.dart';
-import 'package:girscope/models/driver.dart'; // To fetch from external API
+import 'package:girscope/models/driver.dart';
 import 'package:girscope/services/api_service.dart';
 import 'package:girscope/models/site.dart';
 import 'package:girscope/models/department.dart';
+import 'package:girscope/models/business.dart';
 
-class SupabaseService { // Temporary comment
+class SupabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
-  final ApiService _apiService = ApiService(); // Instance of your existing API service
+  final ApiService _apiService = ApiService();
+  
+  // Business context for all operations
+  Business? _currentBusiness;
+  
+  // Set the current business context
+  void setBusinessContext(Business business) {
+    _currentBusiness = business;
+    _apiService.setBusinessContext(business);
+    print('*** SupabaseService: Business context set - ${business.businessName}');
+  }
+  
+  // Get current business ID
+  String? get currentBusinessId => _currentBusiness?.id;
 
   // Method to sync all historical fuel transactions from the external API to Supabase
   Future<void> syncFuelTransactions() async {
-    print('SupabaseService: Starting fuel transaction sync...');
+    if (_currentBusiness == null) {
+      throw Exception('Business context not set. Call setBusinessContext() first.');
+    }
+    
+    print('*** SupabaseService: Starting fuel transaction sync for business: ${_currentBusiness!.businessName}');
     String? lastId;
     bool moreData = true;
     int totalSynced = 0;
+    int errorCount = 0;
+    const maxErrors = 3; // Maximum number of errors before stopping
 
-    // Get the last synced ID from Supabase to resume sync
+    // Get the last synced ID from Supabase to resume sync (filtered by business)
     try {
       final Map<String, dynamic>? lastTransaction = await _supabase
           .from('fuel_transactions')
           .select('id')
-          .order('date', ascending: false) // Assuming 'date' is a good ordering column
+          .eq('business_id', _currentBusiness!.id)
+          .order('date', ascending: false)
           .limit(1)
           .maybeSingle();
       
       if (lastTransaction != null && lastTransaction.isNotEmpty) {
         lastId = lastTransaction['id'] as String?;
-        print('SupabaseService: Resuming sync from lastId: \$lastId');
+        print('*** SupabaseService: Resuming sync from lastId: $lastId');
       }
     } catch (e) {
-      print('SupabaseService: Error getting last synced ID from Supabase: \$e');
+      print('*** SupabaseService: Error getting last synced ID from Supabase: $e');
       // Continue without lastId if there's an error, will fetch all
     }
 
-    while (moreData) {
+    while (moreData && errorCount < maxErrors) {
       try {
         final Map<String, dynamic> result = await _apiService.getFuelTransactionsPaginated(lastId: lastId);
         final List<FuelTransaction> transactions = result['transactions'];
         moreData = result['more'];
 
         if (transactions.isEmpty) {
+          print('*** SupabaseService: No more transactions to sync');
           break;
         }
 
@@ -54,30 +74,39 @@ class SupabaseService { // Temporary comment
             .toSet();
 
         if (vehicleIdsInBatch.isNotEmpty) {
-          final existingVehiclesResponse = await _supabase
-              .rpc('get_vehicles_by_ids', params: { 'ids': vehicleIdsInBatch.toList() });
+          try {
+            final existingVehiclesResponse = await _supabase
+                .from('vehicles')
+                .select('id')
+                .inFilter('id', vehicleIdsInBatch.toList())
+                .eq('business_id', _currentBusiness!.id);
 
-          final existingVehicleIds =
-              existingVehiclesResponse.map((v) => v['id'].toString()).toSet();
+            final existingVehicleIds =
+                existingVehiclesResponse.map((v) => v['id'].toString()).toSet();
 
-          final missingVehicleIds =
-              vehicleIdsInBatch.difference(existingVehicleIds);
+            final missingVehicleIds =
+                vehicleIdsInBatch.difference(existingVehicleIds);
 
-          if (missingVehicleIds.isNotEmpty) {
-            print('SupabaseService: Found ${missingVehicleIds.length} missing vehicles. Creating placeholder entries...');
-            final List<Map<String, dynamic>> placeholderVehicles = transactions
-                .where((t) => missingVehicleIds.contains(t.vehicleId))
-                .map((t) => {
-                      'id': t.vehicleId!,
-                      'name': t.vehicleName, // The only NOT NULL field
-                    })
-                .toList();
-            
-            // Deduplicate placeholderVehicles before inserting
-            final uniquePlaceholderVehicles = { for (var v in placeholderVehicles) v['id']: v };
+            if (missingVehicleIds.isNotEmpty) {
+              print('*** SupabaseService: Found ${missingVehicleIds.length} missing vehicles. Creating placeholder entries...');
+              final List<Map<String, dynamic>> placeholderVehicles = transactions
+                  .where((t) => missingVehicleIds.contains(t.vehicleId))
+                  .map((t) => {
+                        'id': t.vehicleId!,
+                        'name': t.vehicleName, // The only NOT NULL field
+                        'business_id': _currentBusiness!.id,
+                      })
+                  .toList();
+              
+              // Deduplicate placeholderVehicles before inserting
+              final uniquePlaceholderVehicles = { for (var v in placeholderVehicles) v['id']: v };
 
-            await _supabase.from('vehicles').upsert(uniquePlaceholderVehicles.values.toList(), onConflict: 'id');
-            print('SupabaseService: Created ${uniquePlaceholderVehicles.length} placeholder vehicles.');
+              await _supabase.from('vehicles').upsert(uniquePlaceholderVehicles.values.toList(), onConflict: 'id');
+              print('*** SupabaseService: Created ${uniquePlaceholderVehicles.length} placeholder vehicles.');
+            }
+          } catch (e) {
+            print('*** SupabaseService: Error ensuring vehicles exist: $e');
+            // Continue with sync even if this step fails
           }
         }
         // --- End: Ensure all vehicles from transactions exist ---
@@ -89,29 +118,38 @@ class SupabaseService { // Temporary comment
             .toSet();
 
         if (driverIdsInBatch.isNotEmpty) {
-          final existingDriversResponse = await _supabase
-              .rpc('get_drivers_by_ids', params: { 'ids': driverIdsInBatch.toList() });
+          try {
+            final existingDriversResponse = await _supabase
+                .from('drivers')
+                .select('id')
+                .inFilter('id', driverIdsInBatch.toList())
+                .eq('business_id', _currentBusiness!.id);
 
-          final existingDriverIds =
-              existingDriversResponse.map((d) => d['id'].toString()).toSet();
+            final existingDriverIds =
+                existingDriversResponse.map((d) => d['id'].toString()).toSet();
 
-          final missingDriverIds = driverIdsInBatch.difference(existingDriverIds);
+            final missingDriverIds = driverIdsInBatch.difference(existingDriverIds);
 
-          if (missingDriverIds.isNotEmpty) {
-            print('SupabaseService: Found ${missingDriverIds.length} missing drivers. Creating placeholder entries...');
-            final List<Map<String, dynamic>> placeholderDrivers = transactions
-                .where((t) => missingDriverIds.contains(t.driverId))
-                .map((t) => {
-                      'id': t.driverId!,
-                      'name': t.driverName, // The only NOT NULL field
-                      'first_name': '', // Provide a default empty string
-                    })
-                .toList();
-            
-            final uniquePlaceholderDrivers = { for (var d in placeholderDrivers) d['id']: d };
+            if (missingDriverIds.isNotEmpty) {
+              print('*** SupabaseService: Found ${missingDriverIds.length} missing drivers. Creating placeholder entries...');
+              final List<Map<String, dynamic>> placeholderDrivers = transactions
+                  .where((t) => missingDriverIds.contains(t.driverId))
+                  .map((t) => {
+                        'id': t.driverId!,
+                        'name': t.driverName, // The only NOT NULL field
+                        'first_name': '', // Provide a default empty string
+                        'business_id': _currentBusiness!.id,
+                      })
+                  .toList();
+              
+              final uniquePlaceholderDrivers = { for (var d in placeholderDrivers) d['id']: d };
 
-            await _supabase.from('drivers').upsert(uniquePlaceholderDrivers.values.toList(), onConflict: 'id');
-            print('SupabaseService: Created ${uniquePlaceholderDrivers.length} placeholder drivers.');
+              await _supabase.from('drivers').upsert(uniquePlaceholderDrivers.values.toList(), onConflict: 'id');
+              print('*** SupabaseService: Created ${uniquePlaceholderDrivers.length} placeholder drivers.');
+            }
+          } catch (e) {
+            print('*** SupabaseService: Error ensuring drivers exist: $e');
+            // Continue with sync even if this step fails
           }
         }
         // --- End: Ensure all drivers from transactions exist ---
@@ -135,24 +173,37 @@ class SupabaseService { // Temporary comment
               'vol_max': t.volMax,
               'new_kmeter': t.newKmeter,
               'new_hmeter': t.newHmeter,
+              'business_id': _currentBusiness!.id,
             }).toList();
 
         // Insert into Supabase
         await _supabase.from('fuel_transactions').upsert(dataToInsert, onConflict: 'id');
         totalSynced += transactions.length;
-        print('SupabaseService: Synced \$totalSynced transactions. Last transaction ID: \${transactions.last.id}');
+        print('*** SupabaseService: Synced $totalSynced transactions. Last transaction ID: ${transactions.last.id}');
         lastId = transactions.last.id; // Update lastId for next iteration
+        
+        // Reset error count on successful sync
+        errorCount = 0;
 
       } catch (e, stackTrace) {
-        print('SupabaseService: Error during sync: $e');
+        errorCount++;
+        print('*** SupabaseService: Error during sync (error $errorCount/$maxErrors): $e');
         print('Stack trace: $stackTrace');
         if (e is PostgrestException) {
           print('PostgrestException details: ${e.details}');
         }
-        moreData = false; // Stop on error
+        
+        // If we've reached the maximum number of errors, stop syncing
+        if (errorCount >= maxErrors) {
+          print('*** SupabaseService: Maximum error count reached, stopping sync');
+          moreData = false;
+        } else {
+          // Continue with next batch
+          print('*** SupabaseService: Continuing sync despite error');
+        }
       }
     }
-    print('SupabaseService: Fuel transaction sync complete. Total synced: \$totalSynced');
+    print('*** SupabaseService: Fuel transaction sync complete. Total synced: $totalSynced');
   }
 
   // Method to get fuel transactions from Supabase for a specific driver
@@ -236,7 +287,11 @@ class SupabaseService { // Temporary comment
   }
 
   Future<void> syncVehicles() async {
-    print('SupabaseService: Starting vehicle sync...');
+    if (_currentBusiness == null) {
+      throw Exception('Business context not set. Call setBusinessContext() first.');
+    }
+    
+    print('*** SupabaseService: Starting vehicle sync for business: ${_currentBusiness!.businessName}');
     try {
       final List<Vehicle> vehicles = (await _apiService.getVehicles()).cast<Vehicle>();
       final Map<String, Vehicle> uniqueVehicles = { for (var v in vehicles) v.id: v };
@@ -259,6 +314,7 @@ class SupabaseService { // Temporary comment
           'kmeter': vehicle.odometer?.toInt(),
           'hmeter': vehicle.hourMeter,
           'notes': vehicle.notes,
+          'business_id': _currentBusiness!.id,
         });
 
         for (var vtank in vehicle.vtanks) {
@@ -267,6 +323,7 @@ class SupabaseService { // Temporary comment
               'id': vtank.id,
               'name': vtank.product,
               'capacity': vtank.capacity,
+              'business_id': _currentBusiness!.id,
             };
           }
           final String key = '${vehicle.id}-${vtank.id}';
@@ -275,6 +332,7 @@ class SupabaseService { // Temporary comment
               'vehicle_id': vehicle.id,
               'product_id': vtank.id,
               'capacity': vtank.capacity,
+              'business_id': _currentBusiness!.id,
             };
           }
         }
@@ -282,24 +340,28 @@ class SupabaseService { // Temporary comment
 
       if (uniqueProducts.isNotEmpty) {
         await _supabase.from('products').upsert(uniqueProducts.values.toList(), onConflict: 'id');
-        print('SupabaseService: Synced ${uniqueProducts.length} products.');
+        print('*** SupabaseService: Synced ${uniqueProducts.length} products.');
       }
 
       await _supabase.from('vehicles').upsert(vehiclesToInsert, onConflict: 'id');
-      print('SupabaseService: Synced ${uniqueVehicles.length} vehicles.');
+      print('*** SupabaseService: Synced ${uniqueVehicles.length} vehicles.');
 
       if (uniqueVehicleProducts.isNotEmpty) {
         await _supabase.from('vehicle_products').upsert(uniqueVehicleProducts.values.toList(), onConflict: 'vehicle_id,product_id');
-        print('SupabaseService: Synced ${uniqueVehicleProducts.length} vehicle products.');
+        print('*** SupabaseService: Synced ${uniqueVehicleProducts.length} vehicle products.');
       }
     } catch (e) {
-      print('SupabaseService: Error during vehicle sync: $e');
+      print('*** SupabaseService: Error during vehicle sync: $e');
       rethrow;
     }
   }
 
   Future<void> syncDrivers() async {
-    print('SupabaseService: Starting driver sync...');
+    if (_currentBusiness == null) {
+      throw Exception('Business context not set. Call setBusinessContext() first.');
+    }
+    
+    print('*** SupabaseService: Starting driver sync for business: ${_currentBusiness!.businessName}');
     try {
       await syncAllDepartments();
       final List<Driver> drivers = (await _apiService.getDrivers()).cast<Driver>();
@@ -317,6 +379,7 @@ class SupabaseService { // Temporary comment
             'activity_prompt': driver.activityPrompt,
             'nce_prompt': driver.ncePrompt,
             'notes': driver.notes,
+            'business_id': _currentBusiness!.id,
           }).toList();
 
       await _supabase.from('drivers').upsert(dataToInsert, onConflict: 'id');
@@ -328,10 +391,16 @@ class SupabaseService { // Temporary comment
   }
 
   Future<void> syncAllDepartments() async {
-    print('SupabaseService: Starting all departments sync...');
+    if (_currentBusiness == null) {
+      throw Exception('Business context not set. Call setBusinessContext() first.');
+    }
+    
+    print('*** SupabaseService: Starting all departments sync for business: ${_currentBusiness!.businessName}');
     try {
+      print('*** SupabaseService: Fetching vehicles and drivers for department sync');
       final List<Vehicle> vehicles = (await _apiService.getVehicles()).cast<Vehicle>();
       final List<Driver> drivers = (await _apiService.getDrivers()).cast<Driver>();
+      print('*** SupabaseService: Fetched ${vehicles.length} vehicles and ${drivers.length} drivers');
 
       final Map<String, String> departmentMap = {};
 
@@ -359,22 +428,31 @@ class SupabaseService { // Temporary comment
         }
       }
 
+      print('*** SupabaseService: Found ${departmentMap.length} unique departments');
+
       if (departmentMap.isNotEmpty) {
         final List<Map<String, dynamic>> dataToInsert = departmentMap.entries.map((entry) => {
               'id': entry.key,
               'name': entry.value,
+              'business_id': _currentBusiness!.id,
             }).toList();
         await _supabase.from('departments').upsert(dataToInsert, onConflict: 'id');
-        print('SupabaseService: Synced ${departmentMap.length} unique departments.');
+        print('*** SupabaseService: Synced ${departmentMap.length} unique departments.');
+      } else {
+        print('*** SupabaseService: No departments to sync');
       }
     } catch (e) {
-      print('SupabaseService: Error during all departments sync: $e');
+      print('*** SupabaseService: Error during all departments sync: $e');
       rethrow;
     }
   }
 
   Future<void> syncSites() async {
-    print('SupabaseService: Starting site sync...');
+    if (_currentBusiness == null) {
+      throw Exception('Business context not set. Call setBusinessContext() first.');
+    }
+    
+    print('*** SupabaseService: Starting site sync for business: ${_currentBusiness!.businessName}');
     try {
       final List<Site> sites = (await _apiService.getSites()).cast<Site>();
       final List<Map<String, dynamic>> dataToInsert = sites.map((site) => {
@@ -387,6 +465,7 @@ class SupabaseService { // Temporary comment
             'country': site.country,
             'latitude': site.latitude,
             'longitude': site.longitude,
+            'business_id': _currentBusiness!.id,
           }).toList();
 
       await _supabase.from('sites').upsert(dataToInsert, onConflict: 'id');

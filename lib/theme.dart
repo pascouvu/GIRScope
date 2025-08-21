@@ -2,43 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class LightModeColors {
-  static const lightPrimary = Color(0xFF2E7D32);
+  static const lightPrimary = Color(0xFF1976D2); // Blue instead of green
   static const lightOnPrimary = Color(0xFFFFFFFF);
-  static const lightPrimaryContainer = Color(0xFFE8F5E8);
-  static const lightOnPrimaryContainer = Color(0xFF1B5E20);
+  static const lightPrimaryContainer = Color(0xFFE3F2FD);
+  static const lightOnPrimaryContainer = Color(0xFF0D47A1);
   static const lightSecondary = Color(0xFF1976D2);
   static const lightOnSecondary = Color(0xFFFFFFFF);
-  static const lightTertiary = Color(0xFFFF6B35);
+  static const lightTertiary = Color(0xFF7B1FA2);
   static const lightOnTertiary = Color(0xFFFFFFFF);
   static const lightError = Color(0xFFD32F2F);
   static const lightOnError = Color(0xFFFFFFFF);
   static const lightErrorContainer = Color(0xFFFFEBEE);
   static const lightOnErrorContainer = Color(0xFFB71C1C);
-  static const lightInversePrimary = Color(0xFF81C784);
+  static const lightInversePrimary = Color(0xFF90CAF9);
   static const lightShadow = Color(0xFF000000);
   static const lightSurface = Color(0xFFFAFAFA);
   static const lightOnSurface = Color(0xFF1C1C1C);
-  static const lightAppBarBackground = Color(0xFFE8F5E8);
+  static const lightAppBarBackground = Color(0xFFE3F2FD);
 }
 
 class DarkModeColors {
-  static const darkPrimary = Color(0xFF81C784);
-  static const darkOnPrimary = Color(0xFF1B5E20);
-  static const darkPrimaryContainer = Color(0xFF2E7D32);
-  static const darkOnPrimaryContainer = Color(0xFFE8F5E8);
+  static const darkPrimary = Color(0xFF90CAF9);
+  static const darkOnPrimary = Color(0xFF0D47A1);
+  static const darkPrimaryContainer = Color(0xFF1976D2);
+  static const darkOnPrimaryContainer = Color(0xFFE3F2FD);
   static const darkSecondary = Color(0xFF90CAF9);
   static const darkOnSecondary = Color(0xFF1565C0);
-  static const darkTertiary = Color(0xFFFFAB91);
-  static const darkOnTertiary = Color(0xFFE65100);
+  static const darkTertiary = Color(0xFFCE93D8);
+  static const darkOnTertiary = Color(0xFF4A148C);
   static const darkError = Color(0xFFEF5350);
   static const darkOnError = Color(0xFFB71C1C);
   static const darkErrorContainer = Color(0xFFD32F2F);
   static const darkOnErrorContainer = Color(0xFFFFEBEE);
-  static const darkInversePrimary = Color(0xFF2E7D32);
+  static const darkInversePrimary = Color(0xFF1976D2);
   static const darkShadow = Color(0xFF000000);
   static const darkSurface = Color(0xFF121212);
   static const darkOnSurface = Color(0xFFE0E0E0);
-  static const darkAppBarBackground = Color(0xFF2E7D32);
+  static const darkAppBarBackground = Color(0xFF1976D2);
 }
 
 class FontSizes {

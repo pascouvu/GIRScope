@@ -10,6 +10,7 @@ class Site {
   final String? country;
   final double? latitude;
   final double? longitude;
+  final String? businessId;
   final List<Tank> tanks;
   final List<Pump> pumps;
   final List<Controller> controllers;
@@ -24,6 +25,7 @@ class Site {
     this.country,
     this.latitude,
     this.longitude,
+    this.businessId,
     required this.tanks,
     required this.pumps,
     required this.controllers,
@@ -40,6 +42,7 @@ class Site {
       country: safeStringValue(json['country']),
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
+      businessId: safeStringValue(json['business_id']),
       tanks: (json['tanks'] as List<dynamic>?)
           ?.map((tank) => Tank.fromJson(tank))
           .toList() ?? [],
@@ -61,11 +64,13 @@ class Tank {
   final String id;
   final String name;
   final double? volume;
+  final String? businessId;
 
   Tank({
     required this.id,
     required this.name,
     this.volume,
+    this.businessId,
   });
 
   factory Tank.fromJson(Map<String, dynamic> json) {
@@ -73,6 +78,7 @@ class Tank {
       id: json['id']?.toString() ?? '',
       name: safeStringValue(json['name']),
       volume: json['volume']?.toDouble(),
+      businessId: safeStringValue(json['business_id']),
     );
   }
 }
@@ -80,16 +86,19 @@ class Tank {
 class Pump {
   final String id;
   final String name;
+  final String? businessId;
 
   Pump({
     required this.id,
     required this.name,
+    this.businessId,
   });
 
   factory Pump.fromJson(Map<String, dynamic> json) {
     return Pump(
       id: json['id']?.toString() ?? '',
       name: safeStringValue(json['name']),
+      businessId: safeStringValue(json['business_id']),
     );
   }
 }
@@ -97,16 +106,19 @@ class Pump {
 class Controller {
   final String id;
   final String name;
+  final String? businessId;
 
   Controller({
     required this.id,
     required this.name,
+    this.businessId,
   });
 
   factory Controller.fromJson(Map<String, dynamic> json) {
     return Controller(
       id: json['id']?.toString() ?? '',
       name: safeStringValue(json['name']),
+      businessId: safeStringValue(json['business_id']),
     );
   }
 }

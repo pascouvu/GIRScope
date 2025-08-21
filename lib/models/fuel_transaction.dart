@@ -19,6 +19,7 @@ class FuelTransaction {
   final bool volMax;
   final bool newKmeter;
   final bool newHmeter;
+  final String? businessId;
   final List<StatisticalAnomaly>? statisticalAnomalies;
 
   FuelTransaction({
@@ -39,6 +40,7 @@ class FuelTransaction {
     required this.volMax,
     required this.newKmeter,
     required this.newHmeter,
+    this.businessId,
     this.statisticalAnomalies,
   });
 
@@ -62,6 +64,7 @@ class FuelTransaction {
         volMax: json['vol_max'] ?? false,
         newKmeter: json['new_kmeter'] ?? false,
         newHmeter: json['new_hmeter'] ?? false,
+        businessId: safeStringValue(json['business_id']),
       );
     } catch (e) {
       print('FuelTransaction.fromJson - Error parsing transaction: $e');
@@ -123,6 +126,7 @@ class FuelTransaction {
       volMax: volMax,
       newKmeter: newKmeter,
       newHmeter: newHmeter,
+      businessId: businessId,
       statisticalAnomalies: anomalies,
     );
   }

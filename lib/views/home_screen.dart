@@ -5,8 +5,19 @@ import 'package:girscope/views/anomalies_tab.dart';
 import 'package:girscope/views/profile_screen.dart';
 import 'package:girscope/widgets/responsive_wrapper.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    print('*** HomePage: initState called');
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -17,33 +17,15 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
   String _termsContent = '';
   bool _isLoading = true;
   String? _errorMessage;
-  bool _hasScrolledToBottom = false;
+  bool _isTermsAccepted = false;
   bool _isAccepting = false;
-  final ScrollController _scrollController = ScrollController();
+  final IecApiService _iecApiService = IecApiService();
 
   @override
   void initState() {
     super.initState();
+    print('*** TermsAcceptanceScreen: initState called');
     _loadTermsContent();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >= 
-        _scrollController.position.maxScrollExtent - 50) {
-      if (!_hasScrolledToBottom) {
-        setState(() {
-          _hasScrolledToBottom = true;
-        });
-      }
-    }
   }
 
   Future<void> _loadTermsContent() async {
@@ -53,7 +35,7 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
         _errorMessage = null;
       });
 
-      final content = await IecApiService.getTermsAndConditions();
+      final content = await _iecApiService.getTermsAndConditions();
       
       setState(() {
         _termsContent = content;
@@ -76,17 +58,10 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       await TermsService.acceptTerms();
       
       if (mounted) {
-        // On web, skip sync and go directly to home page
-        if (kIsWeb) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
-        } else {
-          // On mobile, go to sync screen
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const SyncScreen()),
-          );
-        }
+        // Always go to sync screen regardless of platform
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const SyncScreen()),
+        );
       }
     } catch (e) {
       setState(() {
@@ -131,262 +106,280 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveScaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header with logo and title
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              colorScheme.surface,
+              colorScheme.primaryContainer,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // App logo
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: 80,
-                    width: 80,
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        height: 100,
+                        width: 100,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
                   Text(
                     'GIRScope',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
+                    style: textTheme.headlineLarge?.copyWith(
+                      color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Terms and Conditions',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
-                ],
-              ),
-            ),
-            
-            // Content area
-            Expanded(
-              child: _buildContent(),
-            ),
-            
-            // Action buttons
-            if (!_isLoading && _errorMessage == null)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.2),
-                      spreadRadius: 1,
-                      blurRadius: 4,
-                      offset: const Offset(0, -2),
+                  const SizedBox(height: 40),
+                  
+                  // Terms content card
+                  Container(
+                    padding: const EdgeInsets.all(24.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!_hasScrolledToBottom)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
                           children: [
                             Icon(
-                              Icons.keyboard_arrow_down,
-                              size: 16,
-                              color: Colors.orange[700],
+                              Icons.description,
+                              color: colorScheme.primary,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Terms and Conditions',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Terms content
+                        if (_isLoading)
+                          const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 16),
+                                Text('Loading Terms and Conditions...'),
+                              ],
+                            ),
+                          )
+                        else if (_errorMessage != null)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 64,
+                                    color: Colors.red[300],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Error loading Terms and Conditions',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[700],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _errorMessage!,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton.icon(
+                                    onPressed: _loadTermsContent,
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Retry'),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 300),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: colorScheme.outline.withValues(alpha: 0.3),
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(
+                                _termsContent,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  height: 1.5,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Terms acceptance checkbox
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _isTermsAccepted,
+                              onChanged: _isLoading || _errorMessage != null
+                                  ? null
+                                  : (value) {
+                                      setState(() {
+                                        _isTermsAccepted = value ?? false;
+                                      });
+                                    },
+                              activeColor: colorScheme.primary,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Please scroll to the bottom to read all terms',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange[700],
+                                'I agree to the Terms and Conditions',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurface,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _isAccepting ? null : _declineTerms,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              side: BorderSide(color: Colors.grey[400]!),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Action buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isAccepting ? null : _declineTerms,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  side: BorderSide(color: Colors.grey[400]!),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text('Decline'),
+                              ),
                             ),
-                            child: const Text('Decline'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 2,
-                          child: ElevatedButton(
-                            onPressed: (_hasScrolledToBottom && !_isAccepting) 
-                                ? _acceptTerms 
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: (_isTermsAccepted && !_isAccepting) 
+                                    ? _acceptTerms 
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: colorScheme.primary,
+                                  foregroundColor: colorScheme.onPrimary,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: _isAccepting
+                                    ? const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    : const Text('Accept & Continue'),
+                              ),
                             ),
-                            child: _isAccepting
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                : const Text('Accept & Continue'),
-                          ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContent() {
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading Terms and Conditions...'),
-          ],
-        ),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red[300],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading Terms and Conditions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _loadTermsContent,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.description,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Terms and Conditions',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
+                  
+                  // Additional info or footer
+                  const SizedBox(height: 32),
+                  Text(
+                    '© 2025 GIRScope. All rights reserved.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _termsContent,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                color: Colors.black87,
+                ],
               ),
             ),
-            const SizedBox(height: 40), // Extra space at bottom
-          ],
+          ),
         ),
       ),
     );

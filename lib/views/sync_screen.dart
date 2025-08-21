@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:girscope/services/supabase_service.dart';
+import 'package:girscope/services/auth_service.dart';
 import 'package:girscope/widgets/responsive_wrapper.dart';
+import 'package:girscope/widgets/business_logo_widget.dart';
 import 'package:girscope/views/home_screen.dart';
+import 'package:girscope/utils/app_version.dart';
 
 class SyncScreen extends StatefulWidget {
   const SyncScreen({super.key});
@@ -13,6 +16,7 @@ class SyncScreen extends StatefulWidget {
 
 class _SyncScreenState extends State<SyncScreen> {
   final SupabaseService _supabaseService = SupabaseService();
+  String _appVersion = '1.0.0';
 
   Map<String, SyncStatus> _syncStatuses = {
     'Departments': SyncStatus.pending,
@@ -25,13 +29,41 @@ class _SyncScreenState extends State<SyncScreen> {
   @override
   void initState() {
     super.initState();
+    _loadAppVersion();
     _startSyncProcess();
   }
 
+  Future<void> _loadAppVersion() async {
+    final version = await AppVersion.getVersionAsync();
+    if (mounted) {
+      setState(() {
+        _appVersion = version;
+      });
+    }
+  }
+
   Future<void> _startSyncProcess() async {
-    if (kIsWeb) {
-      // On web, skip sync and go directly to home page
-      await Future.delayed(const Duration(milliseconds: 500));
+    print('*** SyncScreen: _startSyncProcess called');
+    
+    // Get the current user's business context
+    try {
+      final business = await AuthService.getUserBusiness();
+      if (business == null) {
+        print('*** SyncScreen: No business found for user, skipping sync');
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        }
+        return;
+      }
+      
+      // Set the business context for the API service
+      _supabaseService.setBusinessContext(business);
+      print('*** SyncScreen: Business context set - ${business.businessName}');
+      
+    } catch (e) {
+      print('*** SyncScreen: Error getting business context: $e');
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomePage()),
@@ -40,16 +72,44 @@ class _SyncScreenState extends State<SyncScreen> {
       return;
     }
 
-    // On mobile, perform actual sync
-    await _performSync('Departments', _supabaseService.syncAllDepartments);
-    await _performSync('Sites', _supabaseService.syncSites);
-    await _performSync('Vehicles', _supabaseService.syncVehicles);
-    await _performSync('Drivers', _supabaseService.syncDrivers);
-    await _performSync('Fuel Transactions', _supabaseService.syncFuelTransactions);
+    if (kIsWeb) {
+      print('*** SyncScreen: Web platform, performing quick sync simulation');
+      // On web, simulate sync process for better UX
+      await _performSync('Departments', () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        print('*** SyncScreen: Web - Departments sync simulated');
+      });
+      await _performSync('Sites', () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        print('*** SyncScreen: Web - Sites sync simulated');
+      });
+      await _performSync('Vehicles', () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        print('*** SyncScreen: Web - Vehicles sync simulated');
+      });
+      await _performSync('Drivers', () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        print('*** SyncScreen: Web - Drivers sync simulated');
+      });
+      await _performSync('Fuel Transactions', () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        print('*** SyncScreen: Web - Fuel Transactions sync simulated');
+      });
+    } else {
+      print('*** SyncScreen: Mobile platform, performing actual sync');
+      // On mobile, perform actual sync
+      await _performSync('Departments', _supabaseService.syncAllDepartments);
+      await _performSync('Sites', _supabaseService.syncSites);
+      await _performSync('Vehicles', _supabaseService.syncVehicles);
+      await _performSync('Drivers', _supabaseService.syncDrivers);
+      await _performSync('Fuel Transactions', _supabaseService.syncFuelTransactions);
+    }
 
+    print('*** SyncScreen: All syncs completed, waiting before navigation');
     // After all syncs are done, wait for 1 second and navigate
     await Future.delayed(const Duration(seconds: 1));
     if (mounted) {
+      print('*** SyncScreen: Navigating to HomePage');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
@@ -97,21 +157,45 @@ class _SyncScreenState extends State<SyncScreen> {
                       width: 150,
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      'GIRScope',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'GIRScope',
+                          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'v$_appVersion',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 40),
                     // Show different content for web vs mobile
                     if (kIsWeb) ...[
-                      Text(
-                        'Loading Application',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Loading Application',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(width: 16),
+                          const BusinessLogoWidget(
+                            width: 60,
+                            height: 30,
+                            fit: BoxFit.contain,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 20),
                       const CircularProgressIndicator(),
@@ -130,11 +214,22 @@ class _SyncScreenState extends State<SyncScreen> {
                         ),
                       ),
                     ] else ...[
-                      Text(
-                        'Syncing Data',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Syncing Data',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(width: 16),
+                          const BusinessLogoWidget(
+                            width: 60,
+                            height: 30,
+                            fit: BoxFit.contain,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 30),
                       // Sync status items

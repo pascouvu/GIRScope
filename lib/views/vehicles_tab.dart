@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:girscope/models/vehicle.dart';
 import 'package:girscope/services/supabase_service.dart';
 import 'package:girscope/widgets/vehicle_card.dart';
+import 'package:girscope/widgets/business_logo_widget.dart';
 
 class VehiclesTab extends StatefulWidget {
   const VehiclesTab({super.key});
@@ -167,29 +168,41 @@ class _VehiclesTabState extends State<VehiclesTab> {
                 ),
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: const Text('All Departments'),
-                        selected: _selectedDepartment == null,
-                        onSelected: (_) => _selectDepartment(null),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 40,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: const Text('All Departments'),
+                              selected: _selectedDepartment == null,
+                              onSelected: (_) => _selectDepartment(null),
+                            ),
+                          ),
+                          ..._departments.map((dept) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(dept),
+                              selected: _selectedDepartment == dept,
+                              onSelected: (_) => _selectDepartment(dept),
+                            ),
+                          )),
+                        ],
                       ),
                     ),
-                    ..._departments.map((dept) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(dept),
-                        selected: _selectedDepartment == dept,
-                        onSelected: (_) => _selectDepartment(dept),
-                      ),
-                    )),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  const BusinessLogoWidget(
+                    width: 80,
+                    height: 40,
+                    fit: BoxFit.contain,
+                  ),
+                ],
               ),
             ],
           ),

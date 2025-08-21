@@ -4,17 +4,44 @@ import 'package:girscope/models/site.dart';
 import 'package:girscope/models/driver.dart';
 import 'package:girscope/models/vehicle.dart';
 import 'package:girscope/models/fuel_transaction.dart';
+import 'package:girscope/models/business.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://pierre-brunet-entreprise-vu-gir.klervi.net/api-impexp';
-  static const String apiKey = 'c08951d341ca7c8b2d034c8d05ca8537';
+  // Remove hardcoded credentials - these will now come from the business context
+  // static const String baseUrl = 'https://pierre-brunet-entreprise-vu-gir.klervi.net/api-impexp';
+  // static const String apiKey = 'c08951d341ca7c8b2d034c8d05ca8537';
 
-  static Map<String, String> get headers => {
-    'X-Klervi-API-Key': apiKey,
-    'Content-Type': 'application/json',
-  };
+  // Business context for API calls
+  Business? _currentBusiness;
 
-  // Test connectivity to the API
+  // Set the current business context
+  void setBusinessContext(Business business) {
+    _currentBusiness = business;
+    print('*** ApiService: Business context set - ${business.businessName} (${business.apiUrl})');
+  }
+
+  // Get headers with business-specific API key
+  Map<String, String> get headers {
+    if (_currentBusiness == null) {
+      throw Exception('Business context not set. Call setBusinessContext() first.');
+    }
+    
+    return {
+      'X-Klervi-API-Key': _currentBusiness!.apiKey,
+      'Content-Type': 'application/json',
+    };
+  }
+
+  // Get the base URL for the current business
+  String get baseUrl {
+    if (_currentBusiness == null) {
+      throw Exception('Business context not set. Call setBusinessContext() first.');
+    }
+    
+    return _currentBusiness!.apiUrl;
+  }
+
+  // Test connectivity to the API with business-specific credentials
   Future<bool> testConnection() async {
     try {
       final response = await http.get(
@@ -72,13 +99,14 @@ class ApiService {
 
   Future<List<Driver>> getDrivers() async {
     try {
-      print('Fetching drivers from: $baseUrl/drivers');
+      print('*** API Service: Fetching drivers from: $baseUrl/drivers');
       final response = await http.get(
         Uri.parse('$baseUrl/drivers'),
         headers: headers,
       ).timeout(const Duration(seconds: 15));
 
-      print('Drivers API - Status Code: ${response.statusCode}');
+      print('*** Drivers API - Status Code: ${response.statusCode}');
+      print('*** Drivers API - Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final dynamic jsonResponse = jsonDecode(response.body);
@@ -97,13 +125,13 @@ class ApiService {
         }
         
         final drivers = data.map((json) => Driver.fromJson(json)).toList();
-        print('Drivers API - Found ${drivers.length} drivers');
+        print('*** Drivers API - Found ${drivers.length} drivers');
         return drivers;
       } else {
         throw Exception('Failed to load drivers: ${response.statusCode} - ${response.reasonPhrase}');
       }
     } catch (e) {
-      print('Drivers API - Exception: $e');
+      print('*** Drivers API - Exception: $e');
       throw Exception('Error fetching drivers: $e');
     }
   }
@@ -231,10 +259,6 @@ class ApiService {
     }
   }
 
-  
-
-  
-
   Future<List<FuelTransaction>> getVehicleRefuelingData(String vehicleId, {int limit = 25, int offset = 0, int days = 30}) async {
     try {
       final uri = Uri.parse('$baseUrl/transac_fuels').replace(
@@ -277,6 +301,4 @@ class ApiService {
       throw Exception('Error fetching vehicle refueling data: $e');
     }
   }
-
-  
 }
